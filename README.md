@@ -44,12 +44,13 @@ make
 ## Penggunaan
 
 ```bash
-./lexer <input_file.txt>
+./lexer <input_file.txt> [output_file.txt]
 ```
 
 Contoh:
 ```bash
 ./lexer test/milestone-1/input-1.txt
+./lexer test/milestone-1/input-1.txt test/milestone-1/output-1.txt
 ```
 
 ## Daftar Token
