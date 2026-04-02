@@ -24,14 +24,14 @@ Implementasi Lexical Analyzer (Lexer) untuk bahasa pemrograman Arion menggunakan
 │   ├── lexer.h       # Deklarasi class Lexer
 │   ├── lexer.cpp     # Implementasi Lexer (DFA)
 │   ├── main.cpp      # Entry point
-│   └── Makefile      # Build system
 ├── test/
 │   └── milestone-1/
 │       ├── input-1.txt
 │       ├── output-1.txt
 │       └── ...
 ├── doc/
-│   └── Laporan-1-*.pdf
+│   └── Laporan-1-TBS.pdf
+├── Makefile      # Build system
 └── README.md
 ```
 
