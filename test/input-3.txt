@@ -1,0 +1,14 @@
+program LiteralTest;
+var
+  c: char;
+  r: real;
+  s: string;
+begin
+  { ini komentar satu baris }
+  c := 'A';
+  r := 3.14;
+  s := 'Halo Dunia';
+  (* ini komentar
+     multi baris *)
+  c := '''';
+end.

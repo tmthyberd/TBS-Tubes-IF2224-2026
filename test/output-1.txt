@@ -1,0 +1,15 @@
+programsy
+ident (Halo)
+semicolon
+varsy
+ident (x)
+colon
+ident (integer)
+semicolon
+beginsy
+ident (x)
+becomes
+intcon (42)
+semicolon
+endsy
+period

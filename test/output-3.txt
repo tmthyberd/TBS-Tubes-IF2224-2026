@@ -1,0 +1,38 @@
+programsy
+ident (LiteralTest)
+semicolon
+varsy
+ident (c)
+colon
+ident (char)
+semicolon
+ident (r)
+colon
+ident (real)
+semicolon
+ident (s)
+colon
+ident (string)
+semicolon
+beginsy
+comment ({ ini komentar satu baris })
+ident (c)
+becomes
+charcon (A)
+semicolon
+ident (r)
+becomes
+realcon (3.14)
+semicolon
+ident (s)
+becomes
+string (Halo Dunia)
+semicolon
+comment ((* ini komentar
+     multi baris *))
+ident (c)
+becomes
+charcon (')
+semicolon
+endsy
+period

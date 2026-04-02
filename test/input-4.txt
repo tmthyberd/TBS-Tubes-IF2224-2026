@@ -1,0 +1,8 @@
+program CaseTest;
+var
+  android, notvalid, modulo: integer;
+begin
+  if NOT (android == 0) AND (notvalid <> 1) OR (modulo > 2) THEN
+    android := 10 Div 2;
+  android := android Mod 3;
+end.

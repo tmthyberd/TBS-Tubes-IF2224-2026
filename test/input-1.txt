@@ -1,8 +1,6 @@
-program Hello;
+program Halo;
 var
-  a, b: integer;
+  x: integer;
 begin
-  a := 5;
-  b := a + 10;
-  writeln('Result = ', b);
+  x := 42;
 end.
