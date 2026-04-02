@@ -1,65 +1,79 @@
-#include <fstream>
 #include <iostream>
+#include <fstream>
 #include <sstream>
-#include <vector>
-#include "lexer.hpp"
-#include "token.hpp"
+#include <string>
+#include "lexer.h"
+#include "token.h"
 
-/**
- * KERANGKA (SKELETON) - Main Program untuk Pascal Lexer
- * 
- * PENGGUNAAN:
- *   ./lexer <input.txt> <output.txt>
- * 
- * CONTOH:
- *   ./lexer test/input.txt test/output.txt
- */
+std::string readFile(const std::string& filename) {
+    std::ifstream file(filename);
+    
+    if (!file.is_open()) {
+        std::cerr << "Error: Cannot open file '" << filename << "'" << std::endl;
+        exit(1);
+    }
+    
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    file.close();
+    
+    return buffer.str();
+}
+
+void printToken(const Token& token) {
+    std::string typeName = tokenTypeToString(token.type);
+    
+    switch (token.type) {
+        // Token dengan nilai
+        case TokenType::INTCON:
+        case TokenType::REALCON:
+        case TokenType::CHARCON:
+        case TokenType::STRING:
+        case TokenType::IDENT:
+        case TokenType::COMMENT:
+        case TokenType::UNKNOWN:
+        case TokenType::ERROR:
+            std::cout << typeName << " (" << token.value << ")" << std::endl;
+            break;
+            
+        // Token tanpa nilai (keyword dan operator)
+        default:
+            std::cout << typeName << std::endl;
+            break;
+    }
+}
+
+void printUsage(const char* programName) {
+    std::cout << "Arion Language Lexer" << std::endl;
+    std::cout << "IF2224 - Teori Bahasa Formal dan Automata" << std::endl;
+    std::cout << std::endl;
+    std::cout << "Usage: " << programName << " <input_file.txt>" << std::endl;
+    std::cout << std::endl;
+    std::cout << "Example:" << std::endl;
+    std::cout << "  " << programName << " program.txt" << std::endl;
+}
+
 
 int main(int argc, char* argv[]) {
-    // =============================================
-    // ARGUMENT VALIDATION - Sudah lengkap
-    // =============================================
-    if (argc < 3) {
-        std::cerr << "Usage: ./lexer <input.txt> <output.txt>\n";
+    // Cek argumen command line
+    if (argc != 2) {
+        printUsage(argv[0]);
         return 1;
     }
-
-    // =============================================
-    // READ INPUT FILE - Sudah lengkap
-    // =============================================
-    std::ifstream inFile(argv[1]);
-    if (!inFile) {
-        std::cerr << "Error: cannot open input file: " << argv[1] << "\n";
-        return 1;
-    }
-
-    // Baca seluruh file ke string
-    std::stringstream buffer;
-    buffer << inFile.rdbuf();
-
-    // =============================================
-    // TOKENIZE - Sudah lengkap
-    // =============================================
-    Lexer lexer(buffer.str());
     
-    // false = tidak include komentar di output
-    std::vector<Token> tokens = lexer.tokenize(false);
-
-    // =============================================
-    // WRITE OUTPUT FILE - Sudah lengkap
-    // =============================================
-    std::ofstream outFile(argv[2]);
-    if (!outFile) {
-        std::cerr << "Error: cannot open output file: " << argv[2] << "\n";
-        return 1;
-    }
-
-    // Tulis setiap token ke stdout dan file output
+    // Baca file input
+    std::string filename = argv[1];
+    std::string sourceCode = readFile(filename);
+    
+    // Inisialisasi lexer
+    Lexer lexer(sourceCode);
+    
+    // Tokenisasi dan cetak hasil
+    std::vector<Token> tokens = lexer.tokenize();
+    
     for (const Token& token : tokens) {
-        std::string out = tokenToOutputString(token);
-        std::cout << out << '\n';    // ke terminal
-        outFile << out << '\n';       // ke file
+        printToken(token);
     }
-
+    
     return 0;
 }
