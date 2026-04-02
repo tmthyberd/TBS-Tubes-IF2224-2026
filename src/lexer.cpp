@@ -267,18 +267,19 @@ Token Lexer::getNextToken() {
                 // Cek apakah ini escape '' atau penutup
                 currentState = State::IN_STRING_ESCAPE;
                 if (!isAtEnd() && currentChar() == '\'') {
-                    // Escape: '' -> tambahkan satu ' ke lexeme
+                    // Escape: '' -> tambahkan satu ' ke lexeme (nilai sebenarnya)
                     readChar();
                     lexeme += '\'';
                     currentState = State::IN_STRING;
                 } else {
                     // Penutup string/charcon
-                    // Tentukan apakah charcon atau string
+                    // Tentukan apakah charcon atau string berdasarkan panjang nilai sebenarnya
                     if (lexeme.length() == 1) {
-                        return makeToken(TokenType::CHARCON, "'" + lexeme + "'");
+                        // Charcon: nilai adalah karakter itu sendiri (tanpa quotes)
+                        return makeToken(TokenType::CHARCON, lexeme);
                     } else {
-                        // String (termasuk string kosong)
-                        return makeToken(TokenType::STRING, "'" + lexeme + "'");
+                        // String (termasuk string kosong) - simpan nilai tanpa quotes
+                        return makeToken(TokenType::STRING, lexeme);
                     }
                 }
             } else if (c == '\n' || c == '\r') {
