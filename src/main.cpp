@@ -20,7 +20,7 @@ std::string readFile(const std::string& filename) {
     return buffer.str();
 }
 
-void printToken(const Token& token) {
+void printToken(std::ostream& out, const Token& token) {
     std::string typeName = tokenTypeToString(token.type);
     
     switch (token.type) {
@@ -33,12 +33,12 @@ void printToken(const Token& token) {
         case TokenType::COMMENT:
         case TokenType::UNKNOWN:
         case TokenType::ERROR:
-            std::cout << typeName << " (" << token.value << ")" << std::endl;
+            out << typeName << " (" << token.value << ")" << std::endl;
             break;
             
         // Token tanpa nilai (keyword dan operator)
         default:
-            std::cout << typeName << std::endl;
+            out << typeName << std::endl;
             break;
     }
 }
@@ -47,16 +47,17 @@ void printUsage(const char* programName) {
     std::cout << "Arion Language Lexer" << std::endl;
     std::cout << "IF2224 - Teori Bahasa Formal dan Automata" << std::endl;
     std::cout << std::endl;
-    std::cout << "Usage: " << programName << " <input_file.txt>" << std::endl;
+    std::cout << "Usage: " << programName << " <input_file.txt> [output_file.txt]" << std::endl;
     std::cout << std::endl;
     std::cout << "Example:" << std::endl;
     std::cout << "  " << programName << " program.txt" << std::endl;
+    std::cout << "  " << programName << " program.txt output.txt" << std::endl;
 }
 
 
 int main(int argc, char* argv[]) {
     // Cek argumen command line
-    if (argc != 2) {
+    if (argc != 2 && argc != 3) {
         printUsage(argv[0]);
         return 1;
     }
@@ -70,9 +71,21 @@ int main(int argc, char* argv[]) {
     
     // Tokenisasi dan cetak hasil
     std::vector<Token> tokens = lexer.tokenize();
-    
-    for (const Token& token : tokens) {
-        printToken(token);
+
+    if (argc == 3) {
+        std::ofstream outputFile(argv[2]);
+        if (!outputFile.is_open()) {
+            std::cerr << "Error: Cannot open output file '" << argv[2] << "'" << std::endl;
+            return 1;
+        }
+
+        for (const Token& token : tokens) {
+            printToken(outputFile, token);
+        }
+    } else {
+        for (const Token& token : tokens) {
+            printToken(std::cout, token);
+        }
     }
     
     return 0;
