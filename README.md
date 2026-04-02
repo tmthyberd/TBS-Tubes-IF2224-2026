@@ -153,3 +153,11 @@ period
 ```
 
 ## Anggota Kelompok
+
+| Nama | NIM |
+|------|-----|
+| Tengku Naufal Saqib | 13524012 |
+| Fayyaz Akmal Lauda | 13524076 |
+| Fahd Muhammad Zahid | 13524078 |
+| Timothy Bernard Soeharto | 13524092 |
+
