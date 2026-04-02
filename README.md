@@ -38,7 +38,6 @@ Implementasi Lexical Analyzer (Lexer) untuk bahasa pemrograman Arion menggunakan
 ## Build
 
 ```bash
-cd src
 make
 ```
 
@@ -50,7 +49,7 @@ make
 
 Contoh:
 ```bash
-./lexer ../test/milestone-1/input-1.txt
+./lexer test/milestone-1/input-1.txt
 ```
 
 ## Daftar Token
