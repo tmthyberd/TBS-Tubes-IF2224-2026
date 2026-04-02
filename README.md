@@ -161,3 +161,12 @@ period
 | Fahd Muhammad Zahid | 13524078 |
 | Timothy Bernard Soeharto | 13524092 |
 
+## Pembagian Tugas
+
+| NIM       | Deskripsi Tugas                                                                 | Persentase |
+|-----------|--------------------------------------------------------------------------------|------------|
+| 13524012  | Membuat DFA, membuat kerangka program, membuat laporan bagian 3.2, membuat program utama                      | 25%        |
+| 13524076  | Membuat DFA, memperbaiki program, membuat laporan bagian 1.4, 2.1, merapihkan laporan              | 25%        |
+| 13524078  | Membuat DFA, membuat template laporan, laporan bagian 1.3, 2.1, Bab 3, dan Bab 4 | 25%        |
+| 13524092  | Membuat DFA, merevisi DFA berdasarkan QnA, pewarnaan DFA, membuat laporan bagian 1.1 dan 1.2 | 25%        |
+
