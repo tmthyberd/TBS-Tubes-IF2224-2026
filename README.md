@@ -20,18 +20,29 @@ Implementasi Lexical Analyzer (Lexer) untuk bahasa pemrograman Arion menggunakan
 
 ```
 ├── src/
-│   ├── token.h       # Definisi TokenType dan Token
-│   ├── lexer.h       # Deklarasi class Lexer
-│   ├── lexer.cpp     # Implementasi Lexer (DFA)
-│   ├── main.cpp      # Entry point
+│   ├── main.cpp
+│   ├── lexer/
+│   │   ├── token.h              # Definisi TokenType dan Token
+│   │   ├── lexer.h              # Deklarasi class Lexer
+│   │   └── lexer.cpp            # Implementasi Lexer (DFA)
+│   └── parser/
+│       └── core/
+│           ├── TokenStream.hpp
+│           ├── TokenStream.cpp
+│           ├── ParseTreeNode.hpp
+│           ├── ParseTreeNode.cpp
+│           ├── TreePrinter.hpp
+│           ├── TreePrinter.cpp
+│           ├── ErrorHandler.hpp
+│           └── ErrorHandler.cpp
 ├── test/
-│   └── milestone-1/
+│   └── lexer/
 │       ├── input-1.txt
 │       ├── output-1.txt
 │       └── ...
 ├── doc/
 │   └── Laporan-1-TBS.pdf
-├── Makefile      # Build system
+├── Makefile
 └── README.md
 ```
 
@@ -39,6 +50,16 @@ Implementasi Lexical Analyzer (Lexer) untuk bahasa pemrograman Arion menggunakan
 
 ```bash
 make
+```
+
+Target Makefile yang tersedia:
+
+```bash
+make runlexer      # build dan jalankan lexer dengan test/lexer/input-1.txt
+make run-lexer     # alias dengan tanda hubung
+make runparser     # placeholder sampai executable parser tersedia
+make run-parser    # alias dengan tanda hubung
+make clean         # hapus hasil kompilasi
 ```
 
 ## Penggunaan
@@ -49,8 +70,8 @@ make
 
 Contoh:
 ```bash
-./lexer test/milestone-1/input-1.txt
-./lexer test/milestone-1/input-1.txt test/milestone-1/output-1.txt
+./lexer test/lexer/input-1.txt
+./lexer test/lexer/input-1.txt test/lexer/output-1.txt
 ```
 
 ## Daftar Token
