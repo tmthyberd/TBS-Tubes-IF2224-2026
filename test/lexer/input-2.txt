@@ -1,0 +1,23 @@
+program OprTest;
+var
+  a, b, c: integer;
+begin
+  a := 10 + 3;
+  b := 10 - 3;
+  c := 10 * 3;
+  a := 10 div 3;
+  b := 10 / 3;
+  c := 10 MOD 3;
+  if a == b then
+    a := 1;
+  if a <> b then
+    a := 2;
+  if a > b then
+    a := 3;
+  if a >= b then
+    a := 4;
+  if a < b then
+    a := 5;
+  if a <= b then
+    a := 6;
+end.

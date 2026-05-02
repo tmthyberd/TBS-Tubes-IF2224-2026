@@ -2,8 +2,8 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include "lexer.h"
-#include "token.h"
+#include "lexer/lexer.h"
+#include "lexer/token.h"
 
 std::string readFile(const std::string& filename) {
     std::ifstream file(filename);
