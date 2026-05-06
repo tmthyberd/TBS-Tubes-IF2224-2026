@@ -58,8 +58,21 @@ std::unique_ptr<ParseTreeNode> Parser::parse_index_list() {
 }
 
 std::unique_ptr<ParseTreeNode> Parser::parse_component_variable() {
-    // logic component-variable udah dihandle di parse_variable() pake loop, jadi panggil parse_variable() aja
-    return nullptr;
+    auto node = std::make_unique<ParseTreeNode>("<component-variable>");
+
+    if (ts.check(TokenType::LBRACK)) {
+        node->addToken(ts.advance());                                       
+        node->addChild(parse_index_list());                                   
+        node->addToken(ts.expect(TokenType::RBRACK, "parse_component_variable")); 
+
+    } else if (ts.check(TokenType::PERIOD)) {
+        node->addToken(ts.advance());                                         
+        node->addToken(ts.expect(TokenType::IDENT, "parse_component_variable")); 
+    } else {
+        ErrorHandler::unexpectedToken(ts.peek(), "[ or .", "parse_component_variable");
+    }
+
+    return node;
 }
 
 std::unique_ptr<ParseTreeNode> Parser::parse_variable() {
@@ -68,21 +81,7 @@ std::unique_ptr<ParseTreeNode> Parser::parse_variable() {
     node->addToken(ts.expect(TokenType::IDENT, "parse_variable"));
 
     while (ts.check(TokenType::LBRACK) || ts.check(TokenType::PERIOD)) {
-        auto compNode = std::make_unique<ParseTreeNode>("<component-variable>");
-
-        compNode->addChild(std::move(node));
-
-        if (ts.check(TokenType::LBRACK)) {
-            compNode->addToken(ts.advance());          
-            compNode->addChild(parse_index_list());     
-            compNode->addToken(ts.expect(TokenType::RBRACK, "parse_variable")); 
-        } else {
-            compNode->addToken(ts.advance());         
-            compNode->addToken(ts.expect(TokenType::IDENT, "parse_variable"));
-        }
-
-        node = std::make_unique<ParseTreeNode>("<variable>");
-        node->addChild(std::move(compNode));
+        node->addChild(parse_component_variable());
     }
 
     return node;
@@ -135,7 +134,7 @@ std::unique_ptr<ParseTreeNode> Parser::parse_factor() {
             node->addChild(parse_variable());
 
         } else {
-            node->addChild(parse_procedure_function_call());
+            node->addToken(ts.advance());
         }
 
     } else {
