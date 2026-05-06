@@ -5,9 +5,9 @@ std::unique_ptr<ParseTreeNode> Parser::parse_program() {
 
     node->addChild(parse_program_header());
 
-    node->addChild(parse_program_header());
-
     node->addChild(parse_declaration_part());
+
+    node->addChild(parse_compound_statement());
 
     const Token& periodToken = ts.expect(TokenType::PERIOD, "<program>");
     node->addToken(periodToken);
@@ -441,28 +441,4 @@ std::unique_ptr<ParseTreeNode> Parser::parse_parameter_group(){
     return node;
 }
 
-std::unique_ptr<ParseTreeNode> parse_compound_statement();
-std::unique_ptr<ParseTreeNode> parse_statement_list();
-std::unique_ptr<ParseTreeNode> parse_statement();
-std::unique_ptr<ParseTreeNode> parse_assignment_statement();
-std::unique_ptr<ParseTreeNode> parse_if_statement();
-std::unique_ptr<ParseTreeNode> parse_case_statement();
-std::unique_ptr<ParseTreeNode> parse_case_block();
-std::unique_ptr<ParseTreeNode> parse_while_statement();
-std::unique_ptr<ParseTreeNode> parse_repeat_statement();
-std::unique_ptr<ParseTreeNode> parse_for_statement();
-std::unique_ptr<ParseTreeNode> parse_procedure_function_call();
-
-std::unique_ptr<ParseTreeNode> parse_variable();
-std::unique_ptr<ParseTreeNode> parse_component_variable();
-std::unique_ptr<ParseTreeNode> parse_index_list();
-std::unique_ptr<ParseTreeNode> parse_parameter_list();
-std::unique_ptr<ParseTreeNode> parse_expression();
-std::unique_ptr<ParseTreeNode> parse_simple_expression();
-std::unique_ptr<ParseTreeNode> parse_term();
-std::unique_ptr<ParseTreeNode> parse_factor();
-
-std::unique_ptr<ParseTreeNode> parse_relational_operator();
-std::unique_ptr<ParseTreeNode> parse_additive_operator();
-std::unique_ptr<ParseTreeNode> parse_multiplicative_operator();
 
