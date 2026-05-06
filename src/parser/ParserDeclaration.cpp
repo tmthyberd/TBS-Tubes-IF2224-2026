@@ -1,5 +1,7 @@
 #include "Parser.hpp"
+#include "core/ErrorHandler.hpp"
 
+// <program> -> <program-header> + <declaration-part> + <compound-state> + period
 std::unique_ptr<ParseTreeNode> Parser::parse_program() {
     auto node = std::unique_ptr<ParseTreeNode>(new ParseTreeNode("<program>"));
 
@@ -15,7 +17,7 @@ std::unique_ptr<ParseTreeNode> Parser::parse_program() {
     return node;
 }
 
-// <program-header> ::= 'program' <ident>
+// <program-header> -> programsy + ident + semicolon
 std::unique_ptr<ParseTreeNode> Parser::parse_program_header()
 {
     auto node = std::unique_ptr<ParseTreeNode>(new ParseTreeNode("<program-header>"));
@@ -32,21 +34,24 @@ std::unique_ptr<ParseTreeNode> Parser::parse_program_header()
     return node;
 }
 
+// <declaration-part> -> (<const-declaration>)* + (<type-declaration>)* + (<var-declaration>)* + (<subprogram-declaration>)*
+// Harus terurut
 std::unique_ptr<ParseTreeNode> Parser::parse_declaration_part(){
     auto node = std::unique_ptr<ParseTreeNode>(new ParseTreeNode("<declaration-part>"));
 
+    // 1. (<const-declaration>)*
     while (ts.check(TokenType::CONSTSY)){
         node->addChild(parse_const_declaration());
     }
-
+    // 2. (<type-declaration>)* 
     while (ts.check(TokenType::TYPESY)){
         node->addChild(parse_type_declaration());
     }
-
+    // 3. (<var-declaration>)* 
     while (ts.check(TokenType::VARSY)){
         node->addChild(parse_var_declaration());
     }
-
+    // 4. (<subprogram-declaration>)*
     while (ts.check(TokenType::PROCEDURESY) || ts.check(TokenType::FUNCTIONSY)){
         node->addChild(parse_subprogram_declaration());
     }
@@ -54,12 +59,17 @@ std::unique_ptr<ParseTreeNode> Parser::parse_declaration_part(){
     return node;
 }
 
+// <const-declaration> -> constsy + (ident + eql + <constant> + semicolon)+
 std::unique_ptr<ParseTreeNode> Parser::parse_const_declaration(){
     auto node = std::unique_ptr<ParseTreeNode>(new ParseTreeNode("<const-declaration>"));
 
+    // constsy (deklarasi awal)
     const Token& constToken = ts.expect(TokenType::CONSTSY, "<const-declaration>");
     node->addToken(constToken);
 
+    // (ident + eql + <constant> + semicolon)*
+    // Melalui do-while karena setidaknya dalam const declaration terdapat sebuah deklarasi const nya
+    // SUpaya tidak menghasilkan const declaration yang null
     do {
         const Token& identToken = ts.expect(TokenType::IDENT, "<const-declaration>");
         node->addToken(identToken);
@@ -71,7 +81,8 @@ std::unique_ptr<ParseTreeNode> Parser::parse_const_declaration(){
 
         const Token& semicolonToken = ts.expect(TokenType::SEMICOLON, "<const-declaration>");
         node->addToken(semicolonToken);
-    } while (ts.check(TokenType::IDENT));
+    } while (ts.check(TokenType::IDENT)); // Selama masih ada Ident maka deklarasi konstanta belum berakhir.
+
     return node;
 }
 
@@ -120,6 +131,12 @@ std::unique_ptr<ParseTreeNode> Parser::parse_constant(){
             const Token& identToken = ts.expect(TokenType::IDENT, "<constant>");
             node->addToken(identToken);
         }
+        else {
+            ErrorHandler::unexpectedToken(ts.peek(), "intcon, realcon, or ident", "<constant>");
+        }
+    }
+    else {
+        ErrorHandler::unexpectedToken(ts.peek(), "constant (charcon, string, ident, intcon, realcon, or signed number)", "<constant>");
     }
     return node;
 }
@@ -209,8 +226,8 @@ std::unique_ptr<ParseTreeNode> Parser::parse_type(){
         node->addChild(parse_range());
     }
     else {
-        node->addChild(parse_range());
-    }   
+        ErrorHandler::unexpectedToken(ts.peek(), "type (ident, array, record, enumerated, or range)", "<type>");
+    }
 
     return node;
 }
@@ -218,10 +235,10 @@ std::unique_ptr<ParseTreeNode> Parser::parse_type(){
 std::unique_ptr<ParseTreeNode> Parser::parse_array_type(){
     auto node = std::unique_ptr<ParseTreeNode>(new ParseTreeNode("<array-type>"));
 
-    const Token& arrayToken = ts.expect(TokenType::ARRAYSY, "<array-type");
+    const Token& arrayToken = ts.expect(TokenType::ARRAYSY, "<array-type>");
     node->addToken(arrayToken);
 
-    const Token& lbrackToken = ts.expect(TokenType::LBRACK, "<array-type");
+    const Token& lbrackToken = ts.expect(TokenType::LBRACK, "<array-type>");
     node->addToken(lbrackToken);
 
     if (ts.check(TokenType::IDENT) && (ts.peek(1).type != TokenType::PERIOD)){
@@ -332,6 +349,9 @@ std::unique_ptr<ParseTreeNode> Parser::parse_subprogram_declaration(){
     else if (ts.check(TokenType::FUNCTIONSY)){
         node->addChild(parse_function_declaration());
     }
+    else {
+        ErrorHandler::unexpectedToken(ts.peek(), "proceduresy or functionsy", "<subprogram-declaration>");
+    }
 
     return node;
 }
@@ -436,6 +456,9 @@ std::unique_ptr<ParseTreeNode> Parser::parse_parameter_group(){
     else if (ts.check(TokenType::IDENT)){
         const Token& identToken = ts.expect(TokenType::IDENT, "<parameter-group>");
         node->addToken(identToken);
+    }
+    else {
+        ErrorHandler::unexpectedToken(ts.peek(), "ident or array-type", "<parameter-group>");
     }
 
     return node;
