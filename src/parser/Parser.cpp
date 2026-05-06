@@ -5,7 +5,9 @@ std::unique_ptr<ParseTreeNode> Parser::parse_program() {
 
     node->addChild(parse_program_header());
 
-    node->addChild(parse_block());
+    node->addChild(parse_program_header());
+
+    node->addChild(parse_declaration_part());
 
     const Token& periodToken = ts.expect(TokenType::PERIOD, "<program>");
     node->addToken(periodToken);
@@ -299,7 +301,7 @@ std::unique_ptr<ParseTreeNode> Parser::parse_field_list(){
 
     node->addChild(parse_field_part());
 
-    while(ts.check(TokenType::SEMICOLON)){
+    while(ts.check(TokenType::SEMICOLON) && ts.peek(1).type == TokenType::IDENT){
         const Token& semicolonToken = ts.expect(TokenType::SEMICOLON, "<field-list>");
         node->addToken(semicolonToken);
 
