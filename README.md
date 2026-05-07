@@ -191,3 +191,23 @@ period
 | 13524078  | Membuat DFA, membuat template laporan, laporan bagian 1.3, 2.1, Bab 3, dan Bab 4 | 25%        |
 | 13524092  | Membuat DFA, merevisi DFA berdasarkan QnA, pewarnaan DFA, membuat laporan bagian 1.1 dan 1.2 | 25%        |
 
+# Milestone 2 – Syntax Analyzer (Parser)
+
+## Deskripsi
+Implementasi **recursive‑descent parser** untuk bahasa Arion sesuai grammar yang telah didefinisikan pada _Laporan‑2‑TBS.md_. Parser membaca file token yang dihasilkan oleh lexer dan membangun **Parse Tree** (`ParseTreeNode`). 
+
+## Build & Run
+```bash
+make            # membangun lexer & parser
+./parser <file_token.txt>      # jalankan parser pada token file
+```
+
+## Testing
+Folder `test/parser/` berisi lima test case (`input-tc1.txt` ‑ `input-tc5.txt`).  Setiap test case memiliki folder:
+- `input/`   – token file input
+- `output/`  – hasil sebenarnya setelah menjalankan `./parser`
+
+
+
+---
+
