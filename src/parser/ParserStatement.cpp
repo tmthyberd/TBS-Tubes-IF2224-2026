@@ -1,10 +1,10 @@
 #include "Parser.hpp"
-#include "ErrorHandler.hpp"
+#include "core/ErrorHandler.hpp"
 using namespace std;
 
 unique_ptr<ParseTreeNode> Parser::parse_compound_statement()
 {
-    auto node = make_unique<ParseTreeNode>("<compound-statement>");
+    auto node = unique_ptr<ParseTreeNode>(new ParseTreeNode("<compound-statement>"));
     node->addToken(ts.expect(TokenType::BEGINSY, "<compound-statement>"));
     node->addChild(parse_statement_list());
     node->addToken(ts.expect(TokenType::ENDSY, "<compound-statement>"));
@@ -13,7 +13,7 @@ unique_ptr<ParseTreeNode> Parser::parse_compound_statement()
 
 unique_ptr<ParseTreeNode> Parser::parse_statement_list()
 {
-    auto node = make_unique<ParseTreeNode>("<statement-list>");
+    auto node = unique_ptr<ParseTreeNode>(new ParseTreeNode("<statement-list>"));
 
     node->addChild(parse_statement());
 
@@ -32,25 +32,9 @@ unique_ptr<ParseTreeNode> Parser::parse_statement_list()
     return node;
 }
 
-static bool isStatementStart(const Token &t)
-{
-    switch (t.type)
-    {
-    case TokenType::IDENT:
-    case TokenType::BEGINSY:
-    case TokenType::IFSY:
-    case TokenType::CASESY:
-    case TokenType::WHILESY:
-    case TokenType::REPEATSY:
-    case TokenType::FORSY:
-        return true;
-    default:
-        return false;
-    }
-}
 unique_ptr<ParseTreeNode> Parser::parse_statement()
 {
-    auto node = make_unique<ParseTreeNode>("<statement>");
+    auto node = unique_ptr<ParseTreeNode>(new ParseTreeNode("<statement>"));
 
     if (ts.check(TokenType::BEGINSY))
     {
@@ -124,17 +108,19 @@ unique_ptr<ParseTreeNode> Parser::parse_statement()
     }
     return node;
 }
+
 unique_ptr<ParseTreeNode> Parser::parse_assignment_statement()
 {
-    auto node = make_unique<ParseTreeNode>("<assignment-statement>");
+    auto node = unique_ptr<ParseTreeNode>(new ParseTreeNode("<assignment-statement>"));
     node->addChild(parse_variable());
     node->addToken(ts.expect(TokenType::BECOMES, "<assignment-statement>"));
     node->addChild(parse_expression());
     return node;
 }
+
 unique_ptr<ParseTreeNode> Parser::parse_if_statement()
 {
-    auto node = make_unique<ParseTreeNode>("<if-statement>");
+    auto node = unique_ptr<ParseTreeNode>(new ParseTreeNode("<if-statement>"));
 
     node->addToken(ts.expect(TokenType::IFSY, "<if-statement>"));
     node->addChild(parse_expression());
@@ -148,9 +134,10 @@ unique_ptr<ParseTreeNode> Parser::parse_if_statement()
     }
     return node;
 }
+
 unique_ptr<ParseTreeNode> Parser::parse_case_statement()
 {
-    auto node = make_unique<ParseTreeNode>("<case-statement>");
+    auto node = unique_ptr<ParseTreeNode>(new ParseTreeNode("<case-statement>"));
 
     node->addToken(ts.expect(TokenType::CASESY, "<case-statement>"));
     node->addChild(parse_expression());
@@ -179,9 +166,8 @@ static bool isCaseConstantStart(const Token &t)
 
 unique_ptr<ParseTreeNode> Parser::parse_case_block()
 {
-    auto node = make_unique<ParseTreeNode>("<case-block>");
+    auto node = unique_ptr<ParseTreeNode>(new ParseTreeNode("<case-block>"));
 
-    // constant list
     node->addChild(parse_constant());
     while (ts.check(TokenType::COMMA))
     {
@@ -191,20 +177,19 @@ unique_ptr<ParseTreeNode> Parser::parse_case_block()
     node->addToken(ts.expect(TokenType::COLON, "<case-block>"));
     node->addChild(parse_statement());
 
-    // (semicolon case-block?)*
     while (ts.check(TokenType::SEMICOLON))
     {
-        // peek past the semicolon
         if (!isCaseConstantStart(ts.peek(1)))
-            break;                    // trailing semicolon before 'end'
-        node->addToken(ts.advance()); // semicolon
+            break;
+        node->addToken(ts.advance());
         node->addChild(parse_case_block());
     }
     return node;
 }
+
 unique_ptr<ParseTreeNode> Parser::parse_while_statement()
 {
-    auto node = make_unique<ParseTreeNode>("<while-statement>");
+    auto node = unique_ptr<ParseTreeNode>(new ParseTreeNode("<while-statement>"));
     node->addToken(ts.expect(TokenType::WHILESY, "<while-statement>"));
     node->addChild(parse_expression());
     node->addToken(ts.expect(TokenType::DOSY, "<while-statement>"));
@@ -214,7 +199,7 @@ unique_ptr<ParseTreeNode> Parser::parse_while_statement()
 
 unique_ptr<ParseTreeNode> Parser::parse_repeat_statement()
 {
-    auto node = std::make_unique<ParseTreeNode>("<repeat-statement>");
+    auto node = unique_ptr<ParseTreeNode>(new ParseTreeNode("<repeat-statement>"));
     node->addToken(ts.expect(TokenType::REPEATSY, "<repeat-statement>"));
     node->addChild(parse_statement_list());
     node->addToken(ts.expect(TokenType::UNTILSY, "<repeat-statement>"));
@@ -224,7 +209,7 @@ unique_ptr<ParseTreeNode> Parser::parse_repeat_statement()
 
 unique_ptr<ParseTreeNode> Parser::parse_for_statement()
 {
-    auto node = std::make_unique<ParseTreeNode>("<for-statement>");
+    auto node = unique_ptr<ParseTreeNode>(new ParseTreeNode("<for-statement>"));
     node->addToken(ts.expect(TokenType::FORSY, "<for-statement>"));
     node->addToken(ts.expect(TokenType::IDENT, "<for-statement>"));
     node->addToken(ts.expect(TokenType::BECOMES, "<for-statement>"));
@@ -240,13 +225,14 @@ unique_ptr<ParseTreeNode> Parser::parse_for_statement()
     node->addChild(parse_statement());
     return node;
 }
+
 unique_ptr<ParseTreeNode> Parser::parse_procedure_function_call()
 {
-    auto node = std::make_unique<ParseTreeNode>("<procedure/function-call>");
+    auto node = unique_ptr<ParseTreeNode>(new ParseTreeNode("<procedure/function-call>"));
     node->addToken(ts.expect(TokenType::IDENT, "<procedure/function-call>"));
     if (ts.check(TokenType::LPARENT))
     {
-        node->addToken(ts.advance()); // lparent
+        node->addToken(ts.advance());
         node->addChild(parse_parameter_list());
         node->addToken(ts.expect(TokenType::RPARENT, "<procedure/function-call>"));
     }
