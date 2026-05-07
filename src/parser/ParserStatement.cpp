@@ -134,11 +134,11 @@ unique_ptr<ParseTreeNode> Parser::parse_assignment_statement()
 }
 unique_ptr<ParseTreeNode> Parser::parse_if_statement()
 {
-    auto node = make_unique<ParseTreeNode>("<parse-if-statement>");
+    auto node = make_unique<ParseTreeNode>("<if-statement>");
 
-    node->addToken(ts.expect(TokenType::IFSY, "<parse-if-statement>"));
+    node->addToken(ts.expect(TokenType::IFSY, "<if-statement>"));
     node->addChild(parse_expression());
-    node->addToken(ts.expect(TokenType::THENSY, "<parse-if-statement>"));
+    node->addToken(ts.expect(TokenType::THENSY, "<if-statement>"));
     node->addChild(parse_statement());
 
     if (ts.check(TokenType::ELSESY))
@@ -150,13 +150,14 @@ unique_ptr<ParseTreeNode> Parser::parse_if_statement()
 }
 unique_ptr<ParseTreeNode> Parser::parse_case_statement()
 {
-    auto node = make_unique<ParseTreeNode>("<parse-case-statement>");
+    auto node = make_unique<ParseTreeNode>("<case-statement>");
 
-    node->addToken(ts.expect(TokenType::CASESY, "<parse-case-statement>"));
+    node->addToken(ts.expect(TokenType::CASESY, "<case-statement>"));
     node->addChild(parse_expression());
-    node->addToken(ts.expect(TokenType::OFSY, "<parse-case-statement>"));
+    node->addToken(ts.expect(TokenType::OFSY, "<case-statement>"));
     node->addChild(parse_case_block());
-    node->addToken(ts.expect(TokenType::ENDSY, "<parse-case-statement>"));
+    node->addToken(ts.expect(TokenType::ENDSY, "<case-statement>"));
+    return node;
 }
 
 static bool isCaseConstantStart(const Token &t)
