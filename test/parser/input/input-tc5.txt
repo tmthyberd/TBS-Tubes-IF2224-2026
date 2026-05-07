@@ -1,0 +1,32 @@
+programsy
+ident (ErrorTest)
+semicolon
+varsy
+ident (x)
+colon
+ident (integer)
+semicolon
+beginsy
+ident (x)
+becomes
+intcon (5)
+semicolon
+ident (x)
+becomes
+ident (x)
+plus
+unknown (@)
+semicolon
+ident (x)
+becomes
+unknown (#)
+intcon (10)
+semicolon
+ident (y)
+becomes
+intcon (3)
+unknown ($)
+intcon (2)
+semicolon
+endsy
+period

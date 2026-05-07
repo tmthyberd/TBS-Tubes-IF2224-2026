@@ -1,0 +1,47 @@
+programsy
+ident (CaseTest)
+semicolon
+varsy
+ident (android)
+comma
+ident (notvalid)
+comma
+ident (modulo)
+colon
+ident (integer)
+semicolon
+beginsy
+ifsy
+notsy
+lparent
+ident (android)
+eql
+intcon (0)
+rparent
+andsy
+lparent
+ident (notvalid)
+neq
+intcon (1)
+rparent
+orsy
+lparent
+ident (modulo)
+gtr
+intcon (2)
+rparent
+thensy
+ident (android)
+becomes
+intcon (10)
+idiv
+intcon (2)
+semicolon
+ident (android)
+becomes
+ident (android)
+imod
+intcon (3)
+semicolon
+endsy
+period
