@@ -141,7 +141,11 @@ unique_ptr<ParseTreeNode> Parser::parse_if_statement()
     node->addToken(ts.expect(TokenType::THENSY, "<parse-if-statement>"));
     node->addChild(parse_statement());
 
-    // lanjutin nanti
+    if (ts.check(TokenType::ELSESY))
+    {
+        node->addToken(ts.advance());
+        node->addChild(parse_statement());
+    }
     return node;
 }
 unique_ptr<ParseTreeNode> Parser::parse_case_statement()
@@ -154,11 +158,96 @@ unique_ptr<ParseTreeNode> Parser::parse_case_statement()
     node->addChild(parse_case_block());
     node->addToken(ts.expect(TokenType::ENDSY, "<parse-case-statement>"));
 }
+
+static bool isCaseConstantStart(const Token &t)
+{
+    switch (t.type)
+    {
+    case TokenType::CHARCON:
+    case TokenType::STRING:
+    case TokenType::INTCON:
+    case TokenType::REALCON:
+    case TokenType::IDENT:
+    case TokenType::PLUS:
+    case TokenType::MINUS:
+        return true;
+    default:
+        return false;
+    }
+}
+
 unique_ptr<ParseTreeNode> Parser::parse_case_block()
 {
-    auto node = make_unique<ParseTreeNode>("<parse-case-block>");
+    auto node = make_unique<ParseTreeNode>("<case-block>");
+
+    // constant list
+    node->addChild(parse_constant());
+    while (ts.check(TokenType::COMMA))
+    {
+        node->addToken(ts.advance());
+        node->addChild(parse_constant());
+    }
+    node->addToken(ts.expect(TokenType::COLON, "<case-block>"));
+    node->addChild(parse_statement());
+
+    // (semicolon case-block?)*
+    while (ts.check(TokenType::SEMICOLON))
+    {
+        // peek past the semicolon
+        if (!isCaseConstantStart(ts.peek(1)))
+            break;                    // trailing semicolon before 'end'
+        node->addToken(ts.advance()); // semicolon
+        node->addChild(parse_case_block());
+    }
+    return node;
 }
-// unique_ptr<ParseTreeNode> Parser::parse_while_statement();
-// unique_ptr<ParseTreeNode> Parser::parse_repeat_statement();
-// unique_ptr<ParseTreeNode> Parser::parse_for_statement();
-// unique_ptr<ParseTreeNode> Parser::parse_procedure_function_call();
+unique_ptr<ParseTreeNode> Parser::parse_while_statement()
+{
+    auto node = make_unique<ParseTreeNode>("<while-statement>");
+    node->addToken(ts.expect(TokenType::WHILESY, "<while-statement>"));
+    node->addChild(parse_expression());
+    node->addToken(ts.expect(TokenType::DOSY, "<while-statement>"));
+    node->addChild(parse_statement());
+    return node;
+}
+
+unique_ptr<ParseTreeNode> Parser::parse_repeat_statement()
+{
+    auto node = std::make_unique<ParseTreeNode>("<repeat-statement>");
+    node->addToken(ts.expect(TokenType::REPEATSY, "<repeat-statement>"));
+    node->addChild(parse_statement_list());
+    node->addToken(ts.expect(TokenType::UNTILSY, "<repeat-statement>"));
+    node->addChild(parse_expression());
+    return node;
+}
+
+unique_ptr<ParseTreeNode> Parser::parse_for_statement()
+{
+    auto node = std::make_unique<ParseTreeNode>("<for-statement>");
+    node->addToken(ts.expect(TokenType::FORSY, "<for-statement>"));
+    node->addToken(ts.expect(TokenType::IDENT, "<for-statement>"));
+    node->addToken(ts.expect(TokenType::BECOMES, "<for-statement>"));
+    node->addChild(parse_expression());
+
+    if (ts.check(TokenType::TOSY) || ts.check(TokenType::DOWNTOSY))
+        node->addToken(ts.advance());
+    else
+        ErrorHandler::unexpectedToken(ts.peek(), "tosy or downtosy", "<for-statement>");
+
+    node->addChild(parse_expression());
+    node->addToken(ts.expect(TokenType::DOSY, "<for-statement>"));
+    node->addChild(parse_statement());
+    return node;
+}
+unique_ptr<ParseTreeNode> Parser::parse_procedure_function_call()
+{
+    auto node = std::make_unique<ParseTreeNode>("<procedure/function-call>");
+    node->addToken(ts.expect(TokenType::IDENT, "<procedure/function-call>"));
+    if (ts.check(TokenType::LPARENT))
+    {
+        node->addToken(ts.advance()); // lparent
+        node->addChild(parse_parameter_list());
+        node->addToken(ts.expect(TokenType::RPARENT, "<procedure/function-call>"));
+    }
+    return node;
+}
