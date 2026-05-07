@@ -318,9 +318,11 @@ std::unique_ptr<ParseTreeNode> Parser::parse_field_list(){
 
     node->addChild(parse_field_part());
 
-    while(ts.check(TokenType::SEMICOLON) && ts.peek(1).type == TokenType::IDENT){
+    while(ts.check(TokenType::SEMICOLON)){
         const Token& semicolonToken = ts.expect(TokenType::SEMICOLON, "<field-list>");
         node->addToken(semicolonToken);
+
+        if (!ts.check(TokenType::IDENT)) break;
 
         node->addChild(parse_field_part());
     }
