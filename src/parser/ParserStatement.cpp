@@ -19,13 +19,6 @@ unique_ptr<ParseTreeNode> Parser::parse_statement_list()
 
     while (ts.check(TokenType::SEMICOLON))
     {
-        TokenType after = ts.peek(1).type;
-
-        if (after == TokenType::ENDSY || after == TokenType::UNTILSY)
-        {
-            break;
-        }
-
         node->addToken(ts.advance());
         node->addChild(parse_statement());
     }
