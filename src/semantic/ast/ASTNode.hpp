@@ -24,7 +24,9 @@ enum class ObjClass
     VARIABLE,
     TYPE,
     PROCEDURE,
-    FUNCTION
+    FUNCTION,
+    RESERVED,
+    PROGRAM
 };
 
 class ASTNode
