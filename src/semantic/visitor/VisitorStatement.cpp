@@ -410,6 +410,10 @@ void SemanticVisitor::visit_program(ProgramNode &n)
 
     if (n.body) visit(*n.body);
 
+    sym.open_scope();
+    if (n.body) visit(*n.body);
+    sym.close_scope();
+
     n.type_code = TypeCode::VOID;
     n.lev = 0;
 }
@@ -708,9 +712,17 @@ TypeCode SemanticVisitor::resolve_binop_type(const std::string &op, TypeCode lt,
     if (op == "==" || op == "<>" || op == "<" ||
         op == ">"  || op == "<=" || op == ">=")
     {
-        if (is_compatible(lt, rt)) return TypeCode::BOOLEAN;
+
+        auto is_ordinal = [](TypeCode t) {
+            return t == TypeCode::INTEGER || t == TypeCode::REAL   ||
+                   t == TypeCode::CHAR    || t == TypeCode::STRING ||
+                   t == TypeCode::SUBRANGE;
+        };
+        if (is_compatible(lt, rt) && is_ordinal(lt)) return TypeCode::BOOLEAN;
         if ((lt == TypeCode::INTEGER || lt == TypeCode::REAL) &&
-            (rt == TypeCode::INTEGER || rt == TypeCode::REAL)) return TypeCode::BOOLEAN;
+            (rt == TypeCode::INTEGER || rt == TypeCode::REAL))  return TypeCode::BOOLEAN;
+        if (lt == TypeCode::CHAR   && rt == TypeCode::CHAR)     return TypeCode::BOOLEAN;
+        if (lt == TypeCode::STRING && rt == TypeCode::STRING)   return TypeCode::BOOLEAN;
         return TypeCode::UNKNOWN;
     }
     return TypeCode::UNKNOWN;
