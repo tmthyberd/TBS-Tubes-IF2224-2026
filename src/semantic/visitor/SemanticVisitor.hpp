@@ -65,6 +65,4 @@ protected:
     bool inside_loop = false;
 };
 
-std::string typecode_to_string(TypeCode t);
-
 #endif
