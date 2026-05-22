@@ -3,11 +3,11 @@
 
 #include <memory>
 #include <string>
-#include "../ast/ASTNode.hpp"
-#include "../ast/ExprNodes.hpp"
-#include "../ast/StmtNodes.hpp"
-#include "../ast/DeclNodes.hpp"
-#include "../../parser/core/ParseTreeNode.hpp"
+#include "ast/ASTNode.hpp"
+#include "ast/ExprNodes.hpp"
+#include "ast/StmtNodes.hpp"
+#include "ast/DeclNodes.hpp"
+#include "../parser/core/ParseTreeNode.hpp"
 
 class ASTBuilder
 {
