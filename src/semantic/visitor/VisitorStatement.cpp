@@ -407,11 +407,13 @@ void SemanticVisitor::visit_program(ProgramNode &n)
 
     for (auto &decl : n.declarations)
         if (decl) visit(*decl);
-
-    if (n.body) visit(*n.body);
-
-    sym.open_scope();
-    if (n.body) visit(*n.body);
+        
+    int btab_idx = sym.open_scope();
+    if (n.body) {
+        if (auto *blk = dynamic_cast<BlockNode*>(n.body.get()))
+            blk->btab_index = btab_idx;   
+        visit(*n.body);
+    }
     sym.close_scope();
 
     n.type_code = TypeCode::VOID;
@@ -443,6 +445,7 @@ void SemanticVisitor::visit_var_decl(VarDeclNode &n)
             sym.get_btab(sym.current_btab_index()).vsze += 1;
     }
 
+    n.lev = sym.current_level();
     n.type_code = TypeCode::VOID;
 }
 
