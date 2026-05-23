@@ -211,3 +211,145 @@ Folder `test/parser/` berisi lima test case (`input-tc1.txt` ‑ `input-tc5.txt`
 
 ---
 
+# Milestone 3 – Semantic Analyzer
+
+## Deskripsi
+Implementasi **Semantic Analyzer** untuk bahasa Arion. Tahap ini membaca **Parse Tree** keluaran parser, mengubahnya menjadi **Abstract Syntax Tree (AST)**, lalu melakukan pemeriksaan semantik (type checking, scope, deklarasi, kompatibilitas operator) sambil membangun **Symbol Table** (tab/btab/atab) mengikuti model Wirth's Pascal-S.
+
+Keluaran program berupa:
+1. **Decorated AST** - AST yang setiap node-nya telah dianotasi `tab_index`, `type`, dan `lev` (lexical level). Dicetak dalam format tree dengan glyph `├──`, `└──`, `│`.
+2. **Symbol Table** - tiga tabel paralel:
+   - `tab`   - identifier (id, link, obj, type, ref, nrm, lev, adr)
+   - `btab`  - block scope (last, lpar, psze, vsze)
+   - `atab`  - array (xtyp, etyp, eref, low, high, elsz, size)
+
+## Pipeline
+```
+source.pas  →  [lexer]  →  tokens  →  [parser]  →  parse-tree  →  [semantic]  →  Decorated AST + Symbol Table
+```
+
+## Build & Run
+```bash
+make            # membangun lexer, parser, dan semantic
+./semantic <parse_tree.txt>                   # cetak hasil ke stdout
+./semantic <parse_tree.txt> <output.txt>      # plus tulis ke file
+```
+
+## Fitur Pemeriksaan Semantik
+
+**Deklarasi & Scope**
+- `var`, `const`, `type`, `procedure`, `function` (nested) dengan multi-level scope
+- Deteksi *redeclaration* di scope yang sama
+- Predefined symbol (reserved keyword + tipe dasar + `true`/`false` + `writeln`/`readln`/`write`/`read`)
+
+**Tipe**
+- Primitif: `integer`, `real`, `char`, `boolean`, `string`
+- Komposit: `array [low..high] of T`, `record … end`, `subrange`, `enum`
+- Type compatibility rules (mis. `integer` promote ke `real` pada operasi mixed)
+
+**Statement & Ekspresi**
+- `assignment` - cek kompatibilitas tipe target dengan value nya
+- `if` / `while` / `repeat-until` - kondisi wajib `boolean`
+- `for` - variabel wajib ordinal (`integer`/`char`)
+- `case` - selector wajib ordinal
+- `procedure`/`function call` - validasi nama & jenis (proc vs func)
+- BinOp `+ - * / div mod and or = <> < > <= >=` dan UnaryOp `- not`
+- Akses `array[i]` (index harus kompatibel, tidak boleh `real`) dan `record.field`
+
+**Error Detection (12+ aturan)**
+| Aturan | Pesan |
+|---|---|
+| Identifier ganda di scope yang sama | `Identifier already declared in this scope: 'x'` |
+| Identifier tidak dideklarasikan | `Undeclared identifier: 'foo'` |
+| Tipe assignment tidak cocok | `Assignment type mismatch: cannot assign X to Y` |
+| Kondisi `if`/`while`/`repeat` bukan `boolean` | `If condition must be Boolean, got Integer` |
+| Variabel `for` bukan ordinal | `For loop variable must be Integer or Char, got Boolean` |
+| `not` bukan `boolean` | `'not' requires Boolean operand, got Integer` |
+| Unary `-` bukan numerik | `Unary '-' requires Integer or Real, got Boolean` |
+| Subrange `low > high` | `Subrange lower bound must not exceed upper bound` |
+| Index array bertipe `real` | `Array index cannot be Real` |
+| Pemanggilan non-procedure/function | `'X' is not a procedure` / `… function` |
+| Akses field record yang tidak ada | `Record has no field 'X'` |
+| Tipe selector `case` non-ordinal | `Case selector must be ordinal …` |
+
+## Struktur Direktori Modul Semantik
+```
+src/semantic/
+├── ASTBuilder.hpp / .cpp            # Transisi ParseTree ke AST
+├── ast/
+│   ├── ASTNode.hpp                  # base + TypeCode, ObjClass
+│   ├── DeclNodes.hpp                # ProgramNode, VarDecl, ConstDecl, ProcDecl, FuncDecl, …
+│   ├── StmtNodes.hpp                # Block, Assign, If, While, For, Repeat, Case, ProcCall
+│   └── ExprNodes.hpp                # BinOp, Unary, Var, Number, Real, Char, String, Bool, …
+├── symbol_table/
+│   ├── Symbol_Table.hpp             # TabEntry, BtabEntry, AtabEntry
+│   └── SymbolTable.cpp              # init_predefined, enter/lookup, open/close scope, print_all
+├── visitor/
+│   ├── SemanticVisitor.hpp
+│   └── VisitorStatement.cpp         # visit_* untuk seluruh node + helper type checking
+└── error/
+    └── SemanticError.hpp            # exception class
+src/semantic_main.cpp                # entry point: load parse-tree, build AST, visit, print
+```
+
+## Testing
+Folder `test/semantic/` berisi **7 test case** (`input-tc1.txt` – `input-tc7.txt`):
+- `input/`  – parse tree input (keluaran parser)
+- `output/` – hasil semantic analysis (Decorated AST + Symbol Table, atau pesan `Semantic Error`)
+
+Cakupan test case:
+| TC  | Skenario |
+|-----|----------|
+| tc1 | Var integer, assignment, binop `+`, pemanggilan `writeln` |
+| tc2 | Const real, var real, aritmetika `*` |
+| tc3 | **Error:** assignment type mismatch (`String` ke `Integer`) |
+| tc4 | `for … to` loop dengan akumulasi |
+| tc5 | **Error:** undeclared identifier |
+| tc6 | `type record`, `var record`/`array`, `RecordAccess`, `ArrayAccess`, `Subrange`, `for` |
+| tc7 | Deklarasi `procedure` & `function`, value-parameter, `FuncCallExpr` |
+
+**Hasil:** 7/7 PASS.
+
+## Format Output
+
+**Contoh Decorated AST** (potongan tc1):
+```
+ProgramNode(name: 'Hello') [type:void, lev:0]
+├── [decl] VarDeclNode(names: 'a', 'b') [type:void, lev:0]
+│   └── [type] VarNode(name: 'integer') [tab_index:21, type:integer, lev:0]
+└── [body] BlockNode(btab_index: 1) [type:void, lev:1]
+    ├── [stmt] AssignNode [type:void, lev:1]
+    │   ├── [target] VarNode(name: 'a') [tab_index:39, type:integer, lev:0]
+    │   └── [value] NumberNode(value: 5) [type:integer, lev:1]
+    ...
+```
+
+**Contoh Symbol Table** (potongan):
+```
+TAB
+idx id                  link obj        type       ref nrm lev adr
+  0 and                   -1 RESERVED   VOID        -1   1   0   0
+  ...
+ 21 integer               20 TYPE       INTEGER     -1   1   0   1
+ ...
+ 38 Hello                 37 PROGRAM    VOID        -1   1   0   0
+ 39 a                     38 VARIABLE   INTEGER     -1   1   0   0
+ 40 b                     39 VARIABLE   INTEGER     -1   1   0   1
+
+BTAB
+idx last lpar psze vsze
+  0   37   -1    0    0
+  1   42   -1    0    2
+
+ATAB
+idx xtyp       etyp       eref low high elsz size
+```
+
+## Pembagian Tugas Milestone 3
+
+| NIM      | Deskripsi Tugas                                                              | Persentase |
+|----------|------------------------------------------------------------------------------|------------|
+| 13524012 | Implementasi sebagian VisitorStatement dan test case, dan fix main program   | 25%        |
+| 13524076 | Implementasi sebagian VisitorStatement, semantic_main, mengisi laporan Bab II| 25%        |
+| 13524078 | Implementasi Interface, membuat template dokumen, dan mengisi Bab I          | 25%        |
+| 13524092 | Implementasi ASTBuilder dan ASTNode, bantu dokumen                           | 25%        |
