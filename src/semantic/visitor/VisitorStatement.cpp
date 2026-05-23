@@ -24,6 +24,21 @@ static std::string typecode_to_string(TypeCode t)
 
 SemanticVisitor::SemanticVisitor(SymbolTable &sym) : sym(sym) {}
 
+static int resolve_type_ref(SymbolTable &sym, ASTNode *type_node)
+{
+    if (!type_node) return -1;
+    if (dynamic_cast<ArrayTypeNode *>(type_node) ||
+        dynamic_cast<RecordTypeNode *>(type_node))
+        return type_node->tab_index;
+    if (auto *vn = dynamic_cast<VarNode *>(type_node))
+    {
+        int idx = sym.lookup(vn->name);
+        if (idx >= 0)
+            return sym.get_tab(idx).ref;
+    }
+    return -1;
+}
+
 void SemanticVisitor::visit(ASTNode &n)
 {
     if (auto *p = dynamic_cast<ProgramNode *>(&n))        visit_program(*p);
@@ -434,7 +449,7 @@ void SemanticVisitor::visit_var_decl(VarDeclNode &n)
         e.id   = name;
         e.obj  = ObjClass::VARIABLE;
         e.type = t;
-        e.ref  = n.type_node ? n.type_node->tab_index : -1;
+        e.ref  = resolve_type_ref(sym, n.type_node.get());
         e.nrm  = 1;
         e.adr  = sym.current_btab_index() >= 0
                      ? sym.get_btab(sym.current_btab_index()).vsze
@@ -479,7 +494,7 @@ void SemanticVisitor::visit_type_decl(TypeDeclNode &n)
     e.id   = n.name;
     e.obj  = ObjClass::TYPE;
     e.type = n.type_def ? n.type_def->type_code : TypeCode::UNKNOWN;
-    e.ref  = n.type_def ? n.type_def->tab_index : -1;
+    e.ref  = resolve_type_ref(sym, n.type_def.get());
     e.nrm  = 1;
     e.adr  = 0;
     sym.enter_tab(e);
@@ -551,13 +566,14 @@ void SemanticVisitor::visit_param_group(ParamGroupNode &n)
     if (n.type_node) visit(*n.type_node);
     TypeCode t = n.type_node ? n.type_node->type_code : TypeCode::UNKNOWN;
 
+    int t_ref = resolve_type_ref(sym, n.type_node.get());
     for (const auto &name : n.names)
     {
         TabEntry e;
         e.id   = name;
         e.obj  = ObjClass::VARIABLE;
         e.type = t;
-        e.ref  = -1;
+        e.ref  = t_ref;
         e.nrm  = n.is_var_param ? 0 : 1;
         e.adr  = sym.current_btab_index() >= 0
                      ? sym.get_btab(sym.current_btab_index()).psze

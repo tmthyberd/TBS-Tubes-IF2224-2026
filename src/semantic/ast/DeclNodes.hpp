@@ -13,7 +13,8 @@ struct ProgramNode : public ASTNode
     std::unique_ptr<ASTNode> body;
 
     std::string node_type() const override;
-    void print(int indent = 0) const override;
+    void print(std::ostream &out, const std::string &prefix = "",
+               bool is_last = true, const std::string &role = "") const override;
 };
 
 struct VarDeclNode : public ASTNode
@@ -22,7 +23,8 @@ struct VarDeclNode : public ASTNode
     std::unique_ptr<ASTNode> type_node;
 
     std::string node_type() const override;
-    void print(int indent = 0) const override;
+    void print(std::ostream &out, const std::string &prefix = "",
+               bool is_last = true, const std::string &role = "") const override;
 };
 
 struct ConstDeclNode : public ASTNode
@@ -31,7 +33,8 @@ struct ConstDeclNode : public ASTNode
     std::unique_ptr<ASTNode> value;
 
     std::string node_type() const override;
-    void print(int indent = 0) const override;
+    void print(std::ostream &out, const std::string &prefix = "",
+               bool is_last = true, const std::string &role = "") const override;
 };
 
 struct TypeDeclNode : public ASTNode
@@ -40,7 +43,8 @@ struct TypeDeclNode : public ASTNode
     std::unique_ptr<ASTNode> type_def;
 
     std::string node_type() const override;
-    void print(int indent = 0) const override;
+    void print(std::ostream &out, const std::string &prefix = "",
+               bool is_last = true, const std::string &role = "") const override;
 };
 
 struct ParamGroupNode : public ASTNode
@@ -50,7 +54,8 @@ struct ParamGroupNode : public ASTNode
     bool is_var_param = false;
 
     std::string node_type() const override;
-    void print(int indent = 0) const override;
+    void print(std::ostream &out, const std::string &prefix = "",
+               bool is_last = true, const std::string &role = "") const override;
 };
 
 // ProcDeclNode: deklarasi prosedur
@@ -61,7 +66,8 @@ struct ProcDeclNode : public ASTNode
     std::unique_ptr<ASTNode> body;
 
     std::string node_type() const override;
-    void print(int indent = 0) const override;
+    void print(std::ostream &out, const std::string &prefix = "",
+               bool is_last = true, const std::string &role = "") const override;
 };
 
 struct FuncDeclNode : public ASTNode
@@ -72,7 +78,8 @@ struct FuncDeclNode : public ASTNode
     std::unique_ptr<ASTNode> body;
 
     std::string node_type() const override;
-    void print(int indent = 0) const override;
+    void print(std::ostream &out, const std::string &prefix = "",
+               bool is_last = true, const std::string &role = "") const override;
 };
 
 struct ArrayTypeNode : public ASTNode
@@ -81,7 +88,8 @@ struct ArrayTypeNode : public ASTNode
     std::unique_ptr<ASTNode> elem_type;
 
     std::string node_type() const override;
-    void print(int indent = 0) const override;
+    void print(std::ostream &out, const std::string &prefix = "",
+               bool is_last = true, const std::string &role = "") const override;
 };
 
 struct RecordTypeNode : public ASTNode
@@ -90,7 +98,8 @@ struct RecordTypeNode : public ASTNode
     bool is_anonymous = true;
 
     std::string node_type() const override;
-    void print(int indent = 0) const override;
+    void print(std::ostream &out, const std::string &prefix = "",
+               bool is_last = true, const std::string &role = "") const override;
 };
 
 struct SubrangeNode : public ASTNode
@@ -99,7 +108,8 @@ struct SubrangeNode : public ASTNode
     std::unique_ptr<ASTNode> high;
 
     std::string node_type() const override;
-    void print(int indent = 0) const override;
+    void print(std::ostream &out, const std::string &prefix = "",
+               bool is_last = true, const std::string &role = "") const override;
 };
 
 struct EnumNode : public ASTNode
@@ -107,7 +117,8 @@ struct EnumNode : public ASTNode
     std::vector<std::string> values;
 
     std::string node_type() const override;
-    void print(int indent = 0) const override;
+    void print(std::ostream &out, const std::string &prefix = "",
+               bool is_last = true, const std::string &role = "") const override;
 };
 
 #endif

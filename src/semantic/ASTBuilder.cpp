@@ -8,15 +8,54 @@
 
 namespace
 {
-std::string spaces(int indent)
+const char *INDENT_STEP = "  ";
+
+inline std::string child_prefix(const std::string &p, bool /*is_last*/)
 {
-    return std::string(indent, ' ');
+    return p + INDENT_STEP;
 }
 
-void print_child(const std::unique_ptr<ASTNode> &node, int indent)
+std::string typecode_name(TypeCode t)
 {
-    if (node)
-        node->print(indent);
+    switch (t)
+    {
+    case TypeCode::INTEGER:  return "integer";
+    case TypeCode::REAL:     return "real";
+    case TypeCode::CHAR:     return "char";
+    case TypeCode::BOOLEAN:  return "boolean";
+    case TypeCode::STRING:   return "string";
+    case TypeCode::ARRAY:    return "array";
+    case TypeCode::RECORD:   return "record";
+    case TypeCode::SUBRANGE: return "subrange";
+    case TypeCode::ENUM:     return "enum";
+    case TypeCode::VOID:     return "void";
+    default:                 return "unknown";
+    }
+}
+
+std::string annot_suffix(const ASTNode &n)
+{
+    std::string parts;
+    auto add = [&](const std::string &s) {
+        parts += parts.empty() ? "" : ", ";
+        parts += s;
+    };
+    if (n.tab_index >= 0)             add("tab_index:" + std::to_string(n.tab_index));
+    if (n.type_code != TypeCode::UNKNOWN) add("type:" + typecode_name(n.type_code));
+    if (n.lev >= 0)                   add("lev:" + std::to_string(n.lev));
+    return parts.empty() ? "" : (" [" + parts + "]");
+}
+
+void emit_line(std::ostream &out,
+               const std::string &prefix,
+               bool /*is_last*/,
+               const std::string &role,
+               const std::string &label,
+               const std::string &suffix)
+{
+    out << prefix;
+    if (!role.empty()) out << "[" << role << "] ";
+    out << label << suffix << '\n';
 }
 
 std::string lower_text(const std::string &value)
@@ -145,7 +184,9 @@ void append_from_container(std::vector<std::unique_ptr<ASTNode> > &target,
 }
 }
 
-// AST node printing
+// AST node printing — Decorated AST with tree-drawing glyphs and per-node
+// semantic annotations (tab_index / type / lev). Format follows the spec
+// example in §II.E.
 
 std::string ProgramNode::node_type() const { return "ProgramNode"; }
 std::string VarDeclNode::node_type() const { return "VarDeclNode"; }
@@ -178,189 +219,353 @@ std::string ArrayAccessNode::node_type() const { return "ArrayAccessNode"; }
 std::string RecordAccessNode::node_type() const { return "RecordAccessNode"; }
 std::string FuncCallExprNode::node_type() const { return "FuncCallExprNode"; }
 
-void ProgramNode::print(int indent) const
+// --- Declarations ---------------------------------------------------------
+
+void ProgramNode::print(std::ostream &out, const std::string &prefix,
+                        bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "(" << name << ")\n";
-    for (std::size_t i = 0; i < declarations.size(); ++i)
-        print_child(declarations[i], indent + 2);
-    print_child(body, indent + 2);
+    emit_line(out, prefix, is_last, role,
+              node_type() + "(name: '" + name + "')", annot_suffix(*this));
+    std::string cp = child_prefix(prefix, is_last);
+    std::size_t total = declarations.size() + (body ? 1 : 0);
+    std::size_t idx = 0;
+    for (std::size_t i = 0; i < declarations.size(); ++i, ++idx)
+        if (declarations[i])
+            declarations[i]->print(out, cp, idx + 1 == total, "decl");
+    if (body) body->print(out, cp, true, "body");
 }
 
-void VarDeclNode::print(int indent) const
+void VarDeclNode::print(std::ostream &out, const std::string &prefix,
+                        bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "\n";
+    std::string label = node_type() + "(names: ";
     for (std::size_t i = 0; i < names.size(); ++i)
-        std::cout << spaces(indent + 2) << names[i] << "\n";
-    print_child(type_node, indent + 2);
+    {
+        if (i) label += ", ";
+        label += "'" + names[i] + "'";
+    }
+    label += ")";
+    emit_line(out, prefix, is_last, role, label, annot_suffix(*this));
+    if (type_node)
+        type_node->print(out, child_prefix(prefix, is_last), true, "type");
 }
 
-void ConstDeclNode::print(int indent) const
+void ConstDeclNode::print(std::ostream &out, const std::string &prefix,
+                          bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "(" << name << ")\n";
-    print_child(value, indent + 2);
+    emit_line(out, prefix, is_last, role,
+              node_type() + "(name: '" + name + "')", annot_suffix(*this));
+    if (value)
+        value->print(out, child_prefix(prefix, is_last), true, "value");
 }
 
-void TypeDeclNode::print(int indent) const
+void TypeDeclNode::print(std::ostream &out, const std::string &prefix,
+                         bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "(" << name << ")\n";
-    print_child(type_def, indent + 2);
+    emit_line(out, prefix, is_last, role,
+              node_type() + "(name: '" + name + "')", annot_suffix(*this));
+    if (type_def)
+        type_def->print(out, child_prefix(prefix, is_last), true, "type");
 }
 
-void ParamGroupNode::print(int indent) const
+void ParamGroupNode::print(std::ostream &out, const std::string &prefix,
+                           bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "\n";
+    std::string label = node_type() + "(";
+    label += is_var_param ? "var: true, " : "var: false, ";
+    label += "names: ";
     for (std::size_t i = 0; i < names.size(); ++i)
-        std::cout << spaces(indent + 2) << names[i] << "\n";
-    print_child(type_node, indent + 2);
+    {
+        if (i) label += ", ";
+        label += "'" + names[i] + "'";
+    }
+    label += ")";
+    emit_line(out, prefix, is_last, role, label, annot_suffix(*this));
+    if (type_node)
+        type_node->print(out, child_prefix(prefix, is_last), true, "type");
 }
 
-void ProcDeclNode::print(int indent) const
+void ProcDeclNode::print(std::ostream &out, const std::string &prefix,
+                         bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "(" << name << ")\n";
-    for (std::size_t i = 0; i < params.size(); ++i)
-        print_child(params[i], indent + 2);
-    print_child(body, indent + 2);
+    emit_line(out, prefix, is_last, role,
+              node_type() + "(name: '" + name + "')", annot_suffix(*this));
+    std::string cp = child_prefix(prefix, is_last);
+    std::size_t total = params.size() + (body ? 1 : 0);
+    std::size_t idx = 0;
+    for (std::size_t i = 0; i < params.size(); ++i, ++idx)
+        if (params[i])
+            params[i]->print(out, cp, idx + 1 == total, "param");
+    if (body) body->print(out, cp, true, "body");
 }
 
-void FuncDeclNode::print(int indent) const
+void FuncDeclNode::print(std::ostream &out, const std::string &prefix,
+                         bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "(" << name << ")\n";
-    for (std::size_t i = 0; i < params.size(); ++i)
-        print_child(params[i], indent + 2);
-    print_child(return_type, indent + 2);
-    print_child(body, indent + 2);
+    emit_line(out, prefix, is_last, role,
+              node_type() + "(name: '" + name + "')", annot_suffix(*this));
+    std::string cp = child_prefix(prefix, is_last);
+    std::size_t total = params.size() + (return_type ? 1 : 0) + (body ? 1 : 0);
+    std::size_t idx = 0;
+    for (std::size_t i = 0; i < params.size(); ++i, ++idx)
+        if (params[i])
+            params[i]->print(out, cp, idx + 1 == total, "param");
+    if (return_type)
+    {
+        return_type->print(out, cp, idx + 1 == total, "returns");
+        ++idx;
+    }
+    if (body) body->print(out, cp, true, "body");
 }
 
-void ArrayTypeNode::print(int indent) const
+void ArrayTypeNode::print(std::ostream &out, const std::string &prefix,
+                          bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "\n";
-    print_child(index_range, indent + 2);
-    print_child(elem_type, indent + 2);
+    emit_line(out, prefix, is_last, role, node_type(), annot_suffix(*this));
+    std::string cp = child_prefix(prefix, is_last);
+    bool has_elem = static_cast<bool>(elem_type);
+    if (index_range)
+        index_range->print(out, cp, !has_elem, "index");
+    if (elem_type)
+        elem_type->print(out, cp, true, "elem");
 }
 
-void RecordTypeNode::print(int indent) const
+void RecordTypeNode::print(std::ostream &out, const std::string &prefix,
+                           bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "\n";
+    emit_line(out, prefix, is_last, role, node_type(), annot_suffix(*this));
+    std::string cp = child_prefix(prefix, is_last);
     for (std::size_t i = 0; i < fields.size(); ++i)
-        print_child(fields[i], indent + 2);
+        if (fields[i])
+            fields[i]->print(out, cp, i + 1 == fields.size(), "field");
 }
 
-void SubrangeNode::print(int indent) const
+void SubrangeNode::print(std::ostream &out, const std::string &prefix,
+                         bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "\n";
-    print_child(low, indent + 2);
-    print_child(high, indent + 2);
+    emit_line(out, prefix, is_last, role, node_type(), annot_suffix(*this));
+    std::string cp = child_prefix(prefix, is_last);
+    bool has_high = static_cast<bool>(high);
+    if (low)  low->print(out, cp, !has_high, "low");
+    if (high) high->print(out, cp, true, "high");
 }
 
-void EnumNode::print(int indent) const
+void EnumNode::print(std::ostream &out, const std::string &prefix,
+                     bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "\n";
+    std::string label = node_type() + "(values: ";
     for (std::size_t i = 0; i < values.size(); ++i)
-        std::cout << spaces(indent + 2) << values[i] << "\n";
+    {
+        if (i) label += ", ";
+        label += "'" + values[i] + "'";
+    }
+    label += ")";
+    emit_line(out, prefix, is_last, role, label, annot_suffix(*this));
 }
 
-void BlockNode::print(int indent) const
+// --- Statements -----------------------------------------------------------
+
+void BlockNode::print(std::ostream &out, const std::string &prefix,
+                      bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "\n";
+    std::string label = node_type();
+    if (btab_index >= 0)
+        label += "(btab_index: " + std::to_string(btab_index) + ")";
+    emit_line(out, prefix, is_last, role, label, annot_suffix(*this));
+    std::string cp = child_prefix(prefix, is_last);
     for (std::size_t i = 0; i < statements.size(); ++i)
-        print_child(statements[i], indent + 2);
+        if (statements[i])
+            statements[i]->print(out, cp, i + 1 == statements.size(), "stmt");
 }
 
-void AssignNode::print(int indent) const
+void AssignNode::print(std::ostream &out, const std::string &prefix,
+                       bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "\n";
-    print_child(target, indent + 2);
-    print_child(value, indent + 2);
+    emit_line(out, prefix, is_last, role, node_type(), annot_suffix(*this));
+    std::string cp = child_prefix(prefix, is_last);
+    if (target) target->print(out, cp, !value, "target");
+    if (value)  value->print(out, cp, true, "value");
 }
 
-void IfNode::print(int indent) const
+void IfNode::print(std::ostream &out, const std::string &prefix,
+                   bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "\n";
-    print_child(condition, indent + 2);
-    print_child(then_branch, indent + 2);
-    print_child(else_branch, indent + 2);
+    emit_line(out, prefix, is_last, role, node_type(), annot_suffix(*this));
+    std::string cp = child_prefix(prefix, is_last);
+    bool has_then = static_cast<bool>(then_branch);
+    bool has_else = static_cast<bool>(else_branch);
+    if (condition)   condition->print(out, cp, !has_then && !has_else, "cond");
+    if (then_branch) then_branch->print(out, cp, !has_else, "then");
+    if (else_branch) else_branch->print(out, cp, true, "else");
 }
 
-void WhileNode::print(int indent) const
+void WhileNode::print(std::ostream &out, const std::string &prefix,
+                      bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "\n";
-    print_child(condition, indent + 2);
-    print_child(body, indent + 2);
+    emit_line(out, prefix, is_last, role, node_type(), annot_suffix(*this));
+    std::string cp = child_prefix(prefix, is_last);
+    if (condition) condition->print(out, cp, !body, "cond");
+    if (body)      body->print(out, cp, true, "body");
 }
 
-void ForNode::print(int indent) const
+void ForNode::print(std::ostream &out, const std::string &prefix,
+                    bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "(" << var_name << ")\n";
-    print_child(from_expr, indent + 2);
-    print_child(to_expr, indent + 2);
-    print_child(body, indent + 2);
+    std::string label = node_type() + "(var: '" + var_name +
+                        "', dir: " + (is_downto ? "downto" : "to") + ")";
+    emit_line(out, prefix, is_last, role, label, annot_suffix(*this));
+    std::string cp = child_prefix(prefix, is_last);
+    bool has_to = static_cast<bool>(to_expr);
+    bool has_body = static_cast<bool>(body);
+    if (from_expr) from_expr->print(out, cp, !has_to && !has_body, "from");
+    if (to_expr)   to_expr->print(out, cp, !has_body, "to");
+    if (body)      body->print(out, cp, true, "body");
 }
 
-void RepeatNode::print(int indent) const
+void RepeatNode::print(std::ostream &out, const std::string &prefix,
+                       bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "\n";
-    for (std::size_t i = 0; i < body.size(); ++i)
-        print_child(body[i], indent + 2);
-    print_child(condition, indent + 2);
+    emit_line(out, prefix, is_last, role, node_type(), annot_suffix(*this));
+    std::string cp = child_prefix(prefix, is_last);
+    std::size_t total = body.size() + (condition ? 1 : 0);
+    std::size_t idx = 0;
+    for (std::size_t i = 0; i < body.size(); ++i, ++idx)
+        if (body[i])
+            body[i]->print(out, cp, idx + 1 == total, "stmt");
+    if (condition) condition->print(out, cp, true, "until");
 }
 
-void CaseNode::print(int indent) const
+void CaseNode::print(std::ostream &out, const std::string &prefix,
+                     bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "\n";
-    print_child(selector, indent + 2);
+    emit_line(out, prefix, is_last, role, node_type(), annot_suffix(*this));
+    std::string cp = child_prefix(prefix, is_last);
+    bool has_cases = !cases.empty();
+    if (selector) selector->print(out, cp, !has_cases, "selector");
     for (std::size_t i = 0; i < cases.size(); ++i)
     {
-        print_child(cases[i].first, indent + 2);
-        print_child(cases[i].second, indent + 4);
+        bool last_case = (i + 1 == cases.size());
+        // Print "case" group as: label then stmt nested under it.
+        if (cases[i].first)
+            cases[i].first->print(out, cp, last_case && !cases[i].second, "label");
+        if (cases[i].second)
+        {
+            std::string cp2 = child_prefix(cp, last_case);
+            cases[i].second->print(out, cp2, true, "stmt");
+        }
     }
 }
 
-void ProcCallNode::print(int indent) const
+void ProcCallNode::print(std::ostream &out, const std::string &prefix,
+                         bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "(" << name << ")\n";
+    emit_line(out, prefix, is_last, role,
+              node_type() + "(name: '" + name + "')", annot_suffix(*this));
+    std::string cp = child_prefix(prefix, is_last);
     for (std::size_t i = 0; i < args.size(); ++i)
-        print_child(args[i], indent + 2);
+        if (args[i])
+            args[i]->print(out, cp, i + 1 == args.size(), "arg");
 }
 
-void BinOpNode::print(int indent) const
+// --- Expressions ----------------------------------------------------------
+
+void BinOpNode::print(std::ostream &out, const std::string &prefix,
+                      bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "(" << op << ")\n";
-    print_child(left, indent + 2);
-    print_child(right, indent + 2);
+    emit_line(out, prefix, is_last, role,
+              node_type() + "(op: '" + op + "')", annot_suffix(*this));
+    std::string cp = child_prefix(prefix, is_last);
+    if (left)  left->print(out, cp, !right, "left");
+    if (right) right->print(out, cp, true, "right");
 }
 
-void UnaryOpNode::print(int indent) const
+void UnaryOpNode::print(std::ostream &out, const std::string &prefix,
+                        bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "(" << op << ")\n";
-    print_child(operand, indent + 2);
+    emit_line(out, prefix, is_last, role,
+              node_type() + "(op: '" + op + "')", annot_suffix(*this));
+    if (operand)
+        operand->print(out, child_prefix(prefix, is_last), true, "operand");
 }
 
-void VarNode::print(int indent) const { std::cout << spaces(indent) << node_type() << "(" << name << ")\n"; }
-void NumberNode::print(int indent) const { std::cout << spaces(indent) << node_type() << "(" << value << ")\n"; }
-void RealNode::print(int indent) const { std::cout << spaces(indent) << node_type() << "(" << value << ")\n"; }
-void CharNode::print(int indent) const { std::cout << spaces(indent) << node_type() << "(" << value << ")\n"; }
-void StringNode::print(int indent) const { std::cout << spaces(indent) << node_type() << "(" << value << ")\n"; }
-void BoolNode::print(int indent) const { std::cout << spaces(indent) << node_type() << "(" << (value ? "true" : "false") << ")\n"; }
-
-void ArrayAccessNode::print(int indent) const
+void VarNode::print(std::ostream &out, const std::string &prefix,
+                    bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "\n";
-    print_child(array, indent + 2);
+    emit_line(out, prefix, is_last, role,
+              node_type() + "(name: '" + name + "')", annot_suffix(*this));
+}
+
+void NumberNode::print(std::ostream &out, const std::string &prefix,
+                       bool is_last, const std::string &role) const
+{
+    emit_line(out, prefix, is_last, role,
+              node_type() + "(value: " + std::to_string(value) + ")",
+              annot_suffix(*this));
+}
+
+void RealNode::print(std::ostream &out, const std::string &prefix,
+                     bool is_last, const std::string &role) const
+{
+    std::ostringstream v;
+    v << value;
+    emit_line(out, prefix, is_last, role,
+              node_type() + "(value: " + v.str() + ")", annot_suffix(*this));
+}
+
+void CharNode::print(std::ostream &out, const std::string &prefix,
+                     bool is_last, const std::string &role) const
+{
+    emit_line(out, prefix, is_last, role,
+              node_type() + "(value: '" + std::string(1, value) + "')",
+              annot_suffix(*this));
+}
+
+void StringNode::print(std::ostream &out, const std::string &prefix,
+                       bool is_last, const std::string &role) const
+{
+    emit_line(out, prefix, is_last, role,
+              node_type() + "(value: \"" + value + "\")", annot_suffix(*this));
+}
+
+void BoolNode::print(std::ostream &out, const std::string &prefix,
+                     bool is_last, const std::string &role) const
+{
+    emit_line(out, prefix, is_last, role,
+              node_type() + "(value: " + (value ? "true" : "false") + ")",
+              annot_suffix(*this));
+}
+
+void ArrayAccessNode::print(std::ostream &out, const std::string &prefix,
+                            bool is_last, const std::string &role) const
+{
+    emit_line(out, prefix, is_last, role, node_type(), annot_suffix(*this));
+    std::string cp = child_prefix(prefix, is_last);
+    bool has_idx = !indices.empty();
+    if (array) array->print(out, cp, !has_idx, "array");
     for (std::size_t i = 0; i < indices.size(); ++i)
-        print_child(indices[i], indent + 2);
+        if (indices[i])
+            indices[i]->print(out, cp, i + 1 == indices.size(), "index");
 }
 
-void RecordAccessNode::print(int indent) const
+void RecordAccessNode::print(std::ostream &out, const std::string &prefix,
+                             bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "." << field_name << "\n";
-    print_child(record, indent + 2);
+    emit_line(out, prefix, is_last, role,
+              node_type() + "(field: '" + field_name + "')",
+              annot_suffix(*this));
+    if (record)
+        record->print(out, child_prefix(prefix, is_last), true, "record");
 }
 
-void FuncCallExprNode::print(int indent) const
+void FuncCallExprNode::print(std::ostream &out, const std::string &prefix,
+                             bool is_last, const std::string &role) const
 {
-    std::cout << spaces(indent) << node_type() << "(" << name << ")\n";
+    emit_line(out, prefix, is_last, role,
+              node_type() + "(name: '" + name + "')", annot_suffix(*this));
+    std::string cp = child_prefix(prefix, is_last);
     for (std::size_t i = 0; i < args.size(); ++i)
-        print_child(args[i], indent + 2);
+        if (args[i])
+            args[i]->print(out, cp, i + 1 == args.size(), "arg");
 }
 
 // Entry Point
