@@ -57,7 +57,6 @@ void emit_line(std::ostream &out,
                const std::string &suffix)
 {
     out << prefix;
-    // Root: dipanggil dengan prefix="" dan role="" — tanpa glyph cabang.
     bool is_root = prefix.empty() && role.empty();
     if (!is_root)
         out << (is_last ? LAST_GLYPH : BRANCH_GLYPH);
@@ -191,10 +190,6 @@ void append_from_container(std::vector<std::unique_ptr<ASTNode> > &target,
 }
 }
 
-// AST node printing — Decorated AST with tree-drawing glyphs and per-node
-// semantic annotations (tab_index / type / lev). Format follows the spec
-// example in §II.E.
-
 std::string ProgramNode::node_type() const { return "ProgramNode"; }
 std::string VarDeclNode::node_type() const { return "VarDeclNode"; }
 std::string ConstDeclNode::node_type() const { return "ConstDeclNode"; }
@@ -233,7 +228,6 @@ void ProgramNode::print(std::ostream &out, const std::string &prefix,
 {
     emit_line(out, prefix, is_last, role,
               node_type() + "(name: '" + name + "')", annot_suffix(*this));
-    // Bila ProgramNode benar-benar root (tanpa parent), anak-anaknya mulai di kolom 0.
     bool is_root = prefix.empty() && role.empty();
     std::string cp = is_root ? std::string() : child_prefix(prefix, is_last);
     std::size_t total = declarations.size() + (body ? 1 : 0);
@@ -454,7 +448,6 @@ void CaseNode::print(std::ostream &out, const std::string &prefix,
     for (std::size_t i = 0; i < cases.size(); ++i)
     {
         bool last_case = (i + 1 == cases.size());
-        // Print "case" group as: label then stmt nested under it.
         if (cases[i].first)
             cases[i].first->print(out, cp, last_case && !cases[i].second, "label");
         if (cases[i].second)
