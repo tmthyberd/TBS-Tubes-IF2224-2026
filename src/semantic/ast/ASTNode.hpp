@@ -1,6 +1,7 @@
 #ifndef AST_NODE_HPP
 #define AST_NODE_HPP
 
+#include <iostream>
 #include <string>
 
 enum class TypeCode
@@ -39,7 +40,7 @@ public:
 
     virtual ~ASTNode() = default;
     virtual std::string node_type() const = 0;
-    virtual void print(int indent = 0) const = 0;
+    virtual void print(std::ostream &out, const std::string &prefix = "", bool is_last = true, const std::string &role = "") const = 0;
 };
 
 #endif
