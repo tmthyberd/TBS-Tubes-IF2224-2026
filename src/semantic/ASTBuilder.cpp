@@ -8,11 +8,14 @@
 
 namespace
 {
-const char *INDENT_STEP = "  ";
+const char *PIPE_INDENT   = "\xE2\x94\x82   ";                       // "│   "
+const char *BLANK_INDENT  = "    ";
+const char *BRANCH_GLYPH  = "\xE2\x94\x9C\xE2\x94\x80\xE2\x94\x80 "; // "├── "
+const char *LAST_GLYPH    = "\xE2\x94\x94\xE2\x94\x80\xE2\x94\x80 "; // "└── "
 
-inline std::string child_prefix(const std::string &p, bool /*is_last*/)
+inline std::string child_prefix(const std::string &p, bool is_last)
 {
-    return p + INDENT_STEP;
+    return p + (is_last ? BLANK_INDENT : PIPE_INDENT);
 }
 
 std::string typecode_name(TypeCode t)
@@ -48,12 +51,16 @@ std::string annot_suffix(const ASTNode &n)
 
 void emit_line(std::ostream &out,
                const std::string &prefix,
-               bool /*is_last*/,
+               bool is_last,
                const std::string &role,
                const std::string &label,
                const std::string &suffix)
 {
     out << prefix;
+    // Root: dipanggil dengan prefix="" dan role="" — tanpa glyph cabang.
+    bool is_root = prefix.empty() && role.empty();
+    if (!is_root)
+        out << (is_last ? LAST_GLYPH : BRANCH_GLYPH);
     if (!role.empty()) out << "[" << role << "] ";
     out << label << suffix << '\n';
 }
@@ -226,7 +233,9 @@ void ProgramNode::print(std::ostream &out, const std::string &prefix,
 {
     emit_line(out, prefix, is_last, role,
               node_type() + "(name: '" + name + "')", annot_suffix(*this));
-    std::string cp = child_prefix(prefix, is_last);
+    // Bila ProgramNode benar-benar root (tanpa parent), anak-anaknya mulai di kolom 0.
+    bool is_root = prefix.empty() && role.empty();
+    std::string cp = is_root ? std::string() : child_prefix(prefix, is_last);
     std::size_t total = declarations.size() + (body ? 1 : 0);
     std::size_t idx = 0;
     for (std::size_t i = 0; i < declarations.size(); ++i, ++idx)
