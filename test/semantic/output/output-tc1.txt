@@ -1,0 +1,69 @@
+=== DECORATED AST ===
+ProgramNode(name: 'Hello') [type:void, lev:0]
+  [decl] VarDeclNode(names: 'a', 'b') [type:void, lev:0]
+    [type] VarNode(name: 'integer') [tab_index:21, type:integer, lev:0]
+  [body] BlockNode(btab_index: 1) [type:void, lev:1]
+    [stmt] AssignNode [type:void, lev:1]
+      [target] VarNode(name: 'a') [tab_index:39, type:integer, lev:0]
+      [value] NumberNode(value: 5) [type:integer, lev:1]
+    [stmt] AssignNode [type:void, lev:1]
+      [target] VarNode(name: 'b') [tab_index:40, type:integer, lev:0]
+      [value] BinOpNode(op: '+') [type:integer, lev:1]
+        [left] VarNode(name: 'a') [tab_index:39, type:integer, lev:0]
+        [right] NumberNode(value: 10) [type:integer, lev:1]
+    [stmt] ProcCallNode(name: 'writeln') [tab_index:34, type:void, lev:1]
+      [arg] StringNode(value: "Result = ") [type:string, lev:1]
+      [arg] VarNode(name: 'b') [tab_index:40, type:integer, lev:0]
+
+=== SYMBOL TABLE ===
+TAB
+idx id                  link obj        type       ref nrm lev adr
+  0 and                   -1 RESERVED   VOID        -1   1   0   0
+  1 array                  0 RESERVED   VOID        -1   1   0   0
+  2 begin                  1 RESERVED   VOID        -1   1   0   0
+  3 case                   2 RESERVED   VOID        -1   1   0   0
+  4 const                  3 RESERVED   VOID        -1   1   0   0
+  5 div                    4 RESERVED   VOID        -1   1   0   0
+  6 downto                 5 RESERVED   VOID        -1   1   0   0
+  7 do                     6 RESERVED   VOID        -1   1   0   0
+  8 else                   7 RESERVED   VOID        -1   1   0   0
+  9 end                    8 RESERVED   VOID        -1   1   0   0
+ 10 for                    9 RESERVED   VOID        -1   1   0   0
+ 11 function              10 RESERVED   VOID        -1   1   0   0
+ 12 if                    11 RESERVED   VOID        -1   1   0   0
+ 13 mod                   12 RESERVED   VOID        -1   1   0   0
+ 14 not                   13 RESERVED   VOID        -1   1   0   0
+ 15 of                    14 RESERVED   VOID        -1   1   0   0
+ 16 or                    15 RESERVED   VOID        -1   1   0   0
+ 17 procedure             16 RESERVED   VOID        -1   1   0   0
+ 18 program               17 RESERVED   VOID        -1   1   0   0
+ 19 record                18 RESERVED   VOID        -1   1   0   0
+ 20 repeat                19 RESERVED   VOID        -1   1   0   0
+ 21 integer               20 TYPE       INTEGER     -1   1   0   1
+ 22 real                  21 TYPE       REAL        -1   1   0   1
+ 23 boolean               22 TYPE       BOOLEAN     -1   1   0   1
+ 24 char                  23 TYPE       CHAR        -1   1   0   1
+ 25 string                24 TYPE       STRING      -1   1   0   1
+ 26 then                  25 RESERVED   VOID        -1   1   0   0
+ 27 to                    26 RESERVED   VOID        -1   1   0   0
+ 28 type                  27 RESERVED   VOID        -1   1   0   0
+ 29 until                 28 RESERVED   VOID        -1   1   0   0
+ 30 var                   29 RESERVED   VOID        -1   1   0   0
+ 31 while                 30 RESERVED   VOID        -1   1   0   0
+ 32 true                  31 CONSTANT   BOOLEAN     -1   1   0   1
+ 33 false                 32 CONSTANT   BOOLEAN     -1   1   0   0
+ 34 writeln               33 PROCEDURE  VOID        -1   1   0   0
+ 35 readln                34 PROCEDURE  VOID        -1   1   0   0
+ 36 write                 35 PROCEDURE  VOID        -1   1   0   0
+ 37 read                  36 PROCEDURE  VOID        -1   1   0   0
+ 38 Hello                 37 PROGRAM    VOID        -1   1   0   0
+ 39 a                     38 VARIABLE   INTEGER     -1   1   0   0
+ 40 b                     39 VARIABLE   INTEGER     -1   1   0   1
+
+BTAB
+idx last lpar psze vsze
+  0   40   -1    0    2
+  1   -1   -1    0    0
+
+ATAB
+idx xtyp       etyp       eref low high elsz size
