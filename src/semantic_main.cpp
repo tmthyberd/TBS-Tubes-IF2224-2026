@@ -1,130 +1,119 @@
-#include <iostream>
+#include <cstring>
 #include <fstream>
+#include <iostream>
+#include <memory>
 #include <sstream>
-#include <string>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 #include "semantic/ASTBuilder.hpp"
 #include "semantic/symbol_table/Symbol_Table.hpp"
 #include "semantic/visitor/SemanticVisitor.hpp"
 #include "semantic/error/SemanticError.hpp"
 
-#include "parser/Parser.hpp"
-#include "parser/core/TokenStream.hpp"
 #include "parser/core/ParseTreeNode.hpp"
-#include "parser/core/TreePrinter.hpp"
 
-#include "lexer/lexer.h"
-#include "lexer/token.h"
+namespace
+{
+// UTF-8 byte sequences used by the parser's TreePrinter.
+const char *PIPE_INDENT  = "\xE2\x94\x82   ";                    // "│   " (6 bytes)
+const char *BLANK_INDENT = "    ";                                // 4 spaces
+const char *BRANCH_GLYPH = "\xE2\x94\x9C\xE2\x94\x80\xE2\x94\x80 "; // "├── " (10 bytes)
+const char *LAST_GLYPH   = "\xE2\x94\x94\xE2\x94\x80\xE2\x94\x80 "; // "└── " (10 bytes)
 
+bool starts_with(const std::string &s, std::size_t pos, const char *prefix)
+{
+    std::size_t len = std::strlen(prefix);
+    if (pos + len > s.size()) return false;
+    return s.compare(pos, len, prefix) == 0;
+}
+
+void rstrip(std::string &s)
+{
+    while (!s.empty() && (s.back() == '\r' || s.back() == ' ' || s.back() == '\t'))
+        s.pop_back();
+}
+
+// Parse the textual parse-tree dump produced by parser/core/TreePrinter back
+// into a ParseTreeNode hierarchy. Indentation uses "│   " (6 bytes) or "    "
+// (4 bytes); the line connector is "├── " or "└── " (10 bytes each).
+std::unique_ptr<ParseTreeNode> parse_parse_tree(std::istream &in)
+{
+    std::unique_ptr<ParseTreeNode> root;
+    std::vector<ParseTreeNode *> stack; // stack[d] = current node at depth d
+
+    std::string line;
+    int line_no = 0;
+    while (std::getline(in, line))
+    {
+        ++line_no;
+        rstrip(line);
+        if (line.empty()) continue;
+
+        // Count indentation units, then look for the branch glyph.
+        std::size_t i = 0;
+        int prefix_units = 0;
+        while (true)
+        {
+            if (starts_with(line, i, PIPE_INDENT))      { i += 6; ++prefix_units; }
+            else if (starts_with(line, i, BLANK_INDENT)) { i += 4; ++prefix_units; }
+            else break;
+        }
+
+        bool has_connector = false;
+        if (starts_with(line, i, BRANCH_GLYPH) || starts_with(line, i, LAST_GLYPH))
+        {
+            i += 10;
+            has_connector = true;
+        }
+
+        std::string name = line.substr(i);
+        rstrip(name);
+        if (name.empty()) continue;
+
+        int depth = prefix_units + (has_connector ? 1 : 0);
+
+        if (depth == 0)
+        {
+            if (root)
+                throw std::runtime_error(
+                    "Malformed parse tree at line " + std::to_string(line_no) +
+                    ": multiple root nodes");
+            root.reset(new ParseTreeNode(name));
+            stack.clear();
+            stack.push_back(root.get());
+            continue;
+        }
+
+        if (!root)
+            throw std::runtime_error(
+                "Malformed parse tree at line " + std::to_string(line_no) +
+                ": child line before root");
+        if (static_cast<std::size_t>(depth) > stack.size())
+            throw std::runtime_error(
+                "Malformed parse tree at line " + std::to_string(line_no) +
+                ": indentation skips levels");
+
+        ParseTreeNode *parent = stack[depth - 1];
+        ParseTreeNode &child = parent->addChild(name);
+        if (static_cast<std::size_t>(depth) < stack.size())
+            stack.resize(depth);
+        stack.push_back(&child);
+    }
+
+    if (!root)
+        throw std::runtime_error("Parse tree file is empty");
+    return root;
+}
 
 void print_usage(const char *prog_name)
 {
     std::cerr << "Arion Compiler - Semantic Analysis (Milestone 3)\n"
               << "Usage:\n"
-              << "  " << prog_name << " <input_source.txt>\n"
-              << "  " << prog_name << " <input_source.txt> <output.txt>\n";
+              << "  " << prog_name << " <parse_tree.txt>\n"
+              << "  " << prog_name << " <parse_tree.txt> <output.txt>\n";
 }
-
-std::string read_file(const std::string &path)
-{
-    std::ifstream f(path);
-    if (!f.is_open())
-        throw std::runtime_error("Cannot open file: " + path);
-    std::ostringstream ss;
-    ss << f.rdbuf();
-    return ss.str();
-}
-
-std::string token_type_to_string(TokenType type)
-{
-    switch (type)
-    {
-    case TokenType::PROGRAMSY:   return "programsy";
-    case TokenType::VARSY:       return "varsy";
-    case TokenType::CONSTSY:     return "constsy";
-    case TokenType::TYPESY:      return "typesy";
-    case TokenType::BEGINSY:     return "beginsy";
-    case TokenType::ENDSY:       return "endsy";
-    case TokenType::IFSY:        return "ifsy";
-    case TokenType::THENSY:      return "thensy";
-    case TokenType::ELSESY:      return "elsesy";
-    case TokenType::WHILESY:     return "whilesy";
-    case TokenType::DOSY:        return "dosy";
-    case TokenType::FORSY:       return "forsy";
-    case TokenType::TOSY:        return "tosy";
-    case TokenType::DOWNTOSY:    return "downtosy";
-    case TokenType::REPEATSY:    return "repeatsy";
-    case TokenType::UNTILSY:     return "untilsy";
-    case TokenType::CASESY:      return "casesy";
-    case TokenType::OFSY:        return "ofsy";
-    case TokenType::PROCEDURESY: return "proceduresy";
-    case TokenType::FUNCTIONSY:  return "functionsy";
-    case TokenType::ARRAYSY:     return "arraysy";
-    case TokenType::RECORDSY:    return "recordsy";
-    case TokenType::NOTSY:       return "notsy";
-    case TokenType::ANDSY:       return "andsy";
-    case TokenType::ORSY:        return "orsy";
-    case TokenType::IDIV:        return "idiv";
-    case TokenType::IMOD:        return "imod";
-    case TokenType::IDENT:       return "ident";
-    case TokenType::INTCON:      return "intcon";
-    case TokenType::REALCON:     return "realcon";
-    case TokenType::CHARCON:     return "charcon";
-    case TokenType::STRING:      return "string";
-    case TokenType::PLUS:        return "plus";
-    case TokenType::MINUS:       return "minus";
-    case TokenType::TIMES:       return "times";
-    case TokenType::RDIV:        return "rdiv";
-    case TokenType::EQL:         return "eql";
-    case TokenType::NEQ:         return "neq";
-    case TokenType::LSS:         return "lss";
-    case TokenType::LEQ:         return "leq";
-    case TokenType::GTR:         return "gtr";
-    case TokenType::GEQ:         return "geq";
-    case TokenType::BECOMES:     return "becomes";
-    case TokenType::SEMICOLON:   return "semicolon";
-    case TokenType::COLON:       return "colon";
-    case TokenType::COMMA:       return "comma";
-    case TokenType::PERIOD:      return "period";
-    case TokenType::LPARENT:     return "lparent";
-    case TokenType::RPARENT:     return "rparent";
-    case TokenType::LBRACK:      return "lbrack";
-    case TokenType::RBRACK:      return "rbrack";
-    case TokenType::COMMENT:     return "comment";
-    case TokenType::END_OF_FILE: return "eof";
-    default:                     return "unknown";
-    }
-}
-
-void write_tokens_to_file(const std::vector<Token> &tokens, const std::string &path, bool skip_comments = true)
-{
-    std::ofstream f(path);
-    if (!f.is_open())
-        throw std::runtime_error("Cannot write token file: " + path);
-
-    for (const Token &tok : tokens)
-    {
-        if (tok.type == TokenType::END_OF_FILE) break;
-        if (skip_comments && tok.type == TokenType::COMMENT) continue;
-
-        std::string type_str = token_type_to_string(tok.type);
-
-        switch (tok.type)
-        {
-        case TokenType::IDENT:
-        case TokenType::INTCON:
-        case TokenType::REALCON:
-        case TokenType::CHARCON:
-        case TokenType::STRING:
-        case TokenType::COMMENT:
-            f << type_str << " (" << tok.value << ")\n";
-            break;
-        default:
-            f << type_str << "\n";
-            break;
-        }
-    }
 }
 
 int main(int argc, char *argv[])
@@ -138,51 +127,19 @@ int main(int argc, char *argv[])
     std::string input_path  = argv[1];
     std::string output_path = (argc == 3) ? argv[2] : "";
 
-    std::string source;
-    try
-    {
-        source = read_file(input_path);
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << "Error reading input: " << e.what() << "\n";
-        return 1;
-    }
-
-    Lexer lexer(source);
-    std::vector<Token> tokens = lexer.tokenize();
-
-    std::string tmp_token_path = input_path + ".tokens.tmp";
-    try
-    {
-        write_tokens_to_file(tokens, tmp_token_path);
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << "Error writing token file: " << e.what() << "\n";
-        return 1;
-    }
-
     std::unique_ptr<ParseTreeNode> parse_tree;
     try
     {
-        TokenStream ts(tmp_token_path);
-        Parser parser(ts);
-        parse_tree = parser.parse_program();
+        std::ifstream in(input_path.c_str());
+        if (!in.is_open())
+            throw std::runtime_error("Cannot open file: " + input_path);
+        parse_tree = parse_parse_tree(in);
     }
     catch (const std::exception &e)
     {
-        std::remove(tmp_token_path.c_str());
-        std::cerr << "Syntax Error: " << e.what() << "\n";
+        std::cerr << e.what() << "\n";
         return 1;
     }
-
-    std::remove(tmp_token_path.c_str());
-
-    // Cetak parse tree
-    std::cout << "=== PARSE TREE ===\n";
-    TreePrinter::printToConsole(*parse_tree);
-    std::cout << "\n";
 
     ASTBuilder builder;
     std::unique_ptr<ASTNode> ast;
@@ -215,7 +172,7 @@ int main(int argc, char *argv[])
     }
 
     std::cout << "=== DECORATED AST ===\n";
-    ast->print(0);
+    ast->print(std::cout);
     std::cout << "\n";
 
     std::cout << "=== SYMBOL TABLE ===\n";
@@ -223,14 +180,14 @@ int main(int argc, char *argv[])
 
     if (!output_path.empty())
     {
-        std::ofstream out(output_path);
+        std::ofstream out(output_path.c_str());
         if (!out.is_open())
         {
             std::cerr << "Cannot open output file: " << output_path << "\n";
             return 1;
         }
         out << "=== DECORATED AST ===\n";
-        ast->print(0);
+        ast->print(out);
         out << "\n=== SYMBOL TABLE ===\n";
         sym.print_all(out);
         std::cout << "\nOutput written to: " << output_path << "\n";
