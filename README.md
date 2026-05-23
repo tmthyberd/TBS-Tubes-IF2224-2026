@@ -307,8 +307,9 @@ Cakupan test case:
 | tc5 | **Error:** undeclared identifier |
 | tc6 | `type record`, `var record`/`array`, `RecordAccess`, `ArrayAccess`, `Subrange`, `for` |
 | tc7 | Deklarasi `procedure` & `function`, value-parameter, `FuncCallExpr` |
+| tc8 | **Error:** redeclared identifier di scope yang sama (`var x: integer; x: real;`) |
 
-**Hasil:** 7/7 PASS.
+**Hasil:** 8/8 PASS.
 
 ## Format Output
 
