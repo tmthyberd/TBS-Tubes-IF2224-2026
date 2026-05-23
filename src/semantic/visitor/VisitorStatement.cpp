@@ -24,11 +24,6 @@ static std::string typecode_to_string(TypeCode t)
 
 SemanticVisitor::SemanticVisitor(SymbolTable &sym) : sym(sym) {}
 
-// Given a type AST node that has already been visited, resolve the symbol-table
-// reference appropriate for storing in a TabEntry::ref field.
-// - Anonymous structured types (ArrayTypeNode, RecordTypeNode) already carry the
-//   correct atab/btab index in tab_index.
-// - A VarNode is a named type alias: look up the underlying type's ref.
 static int resolve_type_ref(SymbolTable &sym, ASTNode *type_node)
 {
     if (!type_node) return -1;

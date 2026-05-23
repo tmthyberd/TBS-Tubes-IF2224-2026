@@ -16,7 +16,6 @@
 
 namespace
 {
-// UTF-8 byte sequences used by the parser's TreePrinter.
 const char *PIPE_INDENT  = "\xE2\x94\x82   ";                    // "│   " (6 bytes)
 const char *BLANK_INDENT = "    ";                                // 4 spaces
 const char *BRANCH_GLYPH = "\xE2\x94\x9C\xE2\x94\x80\xE2\x94\x80 "; // "├── " (10 bytes)
@@ -35,13 +34,10 @@ void rstrip(std::string &s)
         s.pop_back();
 }
 
-// Parse the textual parse-tree dump produced by parser/core/TreePrinter back
-// into a ParseTreeNode hierarchy. Indentation uses "│   " (6 bytes) or "    "
-// (4 bytes); the line connector is "├── " or "└── " (10 bytes each).
 std::unique_ptr<ParseTreeNode> parse_parse_tree(std::istream &in)
 {
     std::unique_ptr<ParseTreeNode> root;
-    std::vector<ParseTreeNode *> stack; // stack[d] = current node at depth d
+    std::vector<ParseTreeNode *> stack; 
 
     std::string line;
     int line_no = 0;
@@ -51,7 +47,6 @@ std::unique_ptr<ParseTreeNode> parse_parse_tree(std::istream &in)
         rstrip(line);
         if (line.empty()) continue;
 
-        // Count indentation units, then look for the branch glyph.
         std::size_t i = 0;
         int prefix_units = 0;
         while (true)
