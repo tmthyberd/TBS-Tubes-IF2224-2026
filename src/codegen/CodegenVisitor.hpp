@@ -88,6 +88,8 @@ public:
         instructions_.clear();
     }
 
+    static OprCode ast_op_to_opr(const std::string &op);
+
     void set_symbol_table(const SymbolTable &sym)
     {
         sym_ = &sym;
