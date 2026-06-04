@@ -1,0 +1,6 @@
+0 INT 0 6
+1 LOD 0 3
+2 LOD 0 4
+3 CAL 0 20
+4 STO 0 5
+5 RET 0 0

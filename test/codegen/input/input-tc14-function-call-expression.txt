@@ -1,0 +1,10 @@
+program FunctionCallExpr;
+var
+  x, y, z: integer;
+function sum(a, b: integer): integer;
+begin
+  sum := a + b;
+end;
+begin
+  z := sum(x, y);
+end.
