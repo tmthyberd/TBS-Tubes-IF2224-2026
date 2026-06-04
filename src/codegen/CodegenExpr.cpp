@@ -3,6 +3,100 @@
 #include <stdexcept>
 #include <string>
 
+namespace
+{
+const SymbolTable &require_symbol_table(const CodegenVisitor &visitor,
+                                        const char *where)
+{
+    const SymbolTable *sym = visitor.symbol_table();
+    if (!sym)
+        throw std::runtime_error(std::string(where) + ": SymbolTable is not set");
+    return *sym;
+}
+
+int lvalue_ref(const CodegenVisitor &visitor, const ASTNode &node)
+{
+    const SymbolTable &sym = require_symbol_table(visitor, "lvalue_ref");
+    if (node.tab_index < 0)
+        return -1;
+    return sym.get_tab(node.tab_index).ref;
+}
+
+void emit_lvalue_address_impl(CodegenVisitor &visitor, ASTNode &node)
+{
+    const SymbolTable &sym = require_symbol_table(visitor, "emit_lvalue_address");
+
+    if (auto *var = dynamic_cast<VarNode *>(&node))
+    {
+        if (var->tab_index < 0)
+            throw std::runtime_error("emit_lvalue_address: unresolved variable '" +
+                                     var->name + "'");
+
+        const TabEntry &entry = sym.get_tab(var->tab_index);
+        if (entry.obj != ObjClass::VARIABLE)
+            throw std::runtime_error("emit_lvalue_address: '" + var->name +
+                                     "' is not an assignable variable");
+
+        visitor.emit(Instruction::make(OpCode::LDA,
+                                       entry.lev,
+                                       entry.adr + VM_FRAME_HEADER_SIZE));
+        return;
+    }
+
+    if (auto *access = dynamic_cast<ArrayAccessNode *>(&node))
+    {
+        if (access->indices.empty())
+            throw std::runtime_error("emit_lvalue_address: array access has no indices");
+        if (access->indices.size() != 1)
+            throw std::runtime_error("emit_lvalue_address: multidimensional arrays "
+                                     "need an explicit VM addressing convention");
+
+        int atab_idx = lvalue_ref(visitor, *access->array);
+        if (atab_idx < 0)
+            throw std::runtime_error("emit_lvalue_address: unresolved array type metadata");
+
+        const AtabEntry &atab = sym.get_atab(atab_idx);
+
+        emit_lvalue_address_impl(visitor, *access->array);
+        visitor.visit(*access->indices[0]);
+
+        if (atab.low != 0)
+        {
+            visitor.emit(Instruction::literal(VMValue::integer(atab.low)));
+            visitor.emit(Instruction::operation(OprCode::SUB));
+        }
+
+        if (atab.elsz != 1)
+        {
+            visitor.emit(Instruction::literal(VMValue::integer(atab.elsz)));
+            visitor.emit(Instruction::operation(OprCode::MUL));
+        }
+
+        visitor.emit(Instruction::operation(OprCode::ADD));
+        return;
+    }
+
+    if (auto *access = dynamic_cast<RecordAccessNode *>(&node))
+    {
+        if (access->tab_index < 0)
+            throw std::runtime_error("emit_lvalue_address: unresolved record field '" +
+                                     access->field_name + "'");
+
+        const TabEntry &field = sym.get_tab(access->tab_index);
+
+        emit_lvalue_address_impl(visitor, *access->record);
+        if (field.adr != 0)
+        {
+            visitor.emit(Instruction::literal(VMValue::integer(field.adr)));
+            visitor.emit(Instruction::operation(OprCode::ADD));
+        }
+        return;
+    }
+
+    throw std::runtime_error("emit_lvalue_address: node is not an lvalue");
+}
+}
+
 void CodegenVisitor::visit(ASTNode &node)
 {
     if (auto *p = dynamic_cast<NumberNode *>(&node))        { visit_number(*p);       return; }
@@ -69,13 +163,16 @@ void CodegenVisitor::visit_bool(BoolNode &node)
 
 void CodegenVisitor::visit_var(VarNode &node)
 {
-    if (!sym_)
-        throw std::runtime_error("visit_var: SymbolTable is not set");
+    const SymbolTable &sym = require_symbol_table(*this, "visit_var");
 
     if (node.tab_index < 0)
         throw std::runtime_error("visit_var: unresolved variable '" + node.name + "'");
 
-    const TabEntry &entry = sym_->get_tab(node.tab_index);
+    const TabEntry &entry = sym.get_tab(node.tab_index);
+    if (entry.obj != ObjClass::VARIABLE)
+        throw std::runtime_error("visit_var: '" + node.name +
+                                 "' is not a runtime variable");
+
     int address = variable_address_from_tab_index(node.tab_index);
     int level   = entry.lev;
 
@@ -90,9 +187,7 @@ void CodegenVisitor::visit_binop(BinOpNode &node)
     {
         visit(*node.left);
         visit(*node.right);
-        emit(Instruction::operation(OprCode::MUL));
-        emit(Instruction::literal(VMValue::integer(0)));
-        emit(Instruction::operation(OprCode::NEQ));
+        emit(Instruction::operation(OprCode::AND));
         return;
     }
 
@@ -100,9 +195,7 @@ void CodegenVisitor::visit_binop(BinOpNode &node)
     {
         visit(*node.left);
         visit(*node.right);
-        emit(Instruction::operation(OprCode::ADD));
-        emit(Instruction::literal(VMValue::integer(0)));
-        emit(Instruction::operation(OprCode::GTR));
+        emit(Instruction::operation(OprCode::OR));
         return;
     }
 
@@ -119,7 +212,7 @@ OprCode CodegenVisitor::ast_op_to_opr(const std::string &op)
     if (op == "-")   return OprCode::SUB;
     if (op == "*")   return OprCode::MUL;
     if (op == "/")   return OprCode::DIV;
-    if (op == "div") return OprCode::DIV;
+    if (op == "div") return OprCode::IDIV;
     if (op == "mod") return OprCode::MOD;
 
     if (op == "==")  return OprCode::EQL;
@@ -151,71 +244,33 @@ void CodegenVisitor::visit_unary(UnaryOpNode &node)
     }
 }
 
+void CodegenVisitor::emit_lvalue_address(ASTNode &node)
+{
+    emit_lvalue_address_impl(*this, node);
+}
+
 void CodegenVisitor::visit_array_access(ArrayAccessNode &node)
 {
-    if (!sym_)
-        throw std::runtime_error("visit_array_access: SymbolTable is not set");
-
-    int arr_tab_idx = node.array->tab_index;
-    if (arr_tab_idx < 0)
-        throw std::runtime_error("visit_array_access: unresolved array variable");
-
-    const TabEntry &arr_entry = sym_->get_tab(arr_tab_idx);
-    int base_adr = arr_entry.adr + VM_FRAME_HEADER_SIZE;
-    int level    = arr_entry.lev;
-
-    int low = 0;
-    if (arr_entry.ref >= 0)
-    {
-        const AtabEntry &atab = sym_->get_atab(arr_entry.ref);
-        low = atab.low;
-    }
-
-    if (node.indices.empty())
-        throw std::runtime_error("visit_array_access: array access has no indices");
-
-    visit(*node.indices[0]);
-
-    if (low != 0)
-    {
-        emit(Instruction::literal(VMValue::integer(low)));
-        emit(Instruction::operation(OprCode::SUB));
-    }
-
-    emit(Instruction::literal(VMValue::integer(base_adr)));
-    emit(Instruction::operation(OprCode::ADD));
-
-    emit(Instruction::make(OpCode::LOD, level, base_adr));
+    emit_lvalue_address(node);
+    emit(Instruction::make(OpCode::LDI));
 }
 
 void CodegenVisitor::visit_record_access(RecordAccessNode &node)
 {
-    if (!sym_)
-        throw std::runtime_error("visit_record_access: SymbolTable is not set");
-
-    int field_tab_idx = node.tab_index;
-    if (field_tab_idx < 0)
-        throw std::runtime_error("visit_record_access: unresolved field '" +
-                                  node.field_name + "'");
-
-    const TabEntry &field_entry = sym_->get_tab(field_tab_idx);
-    int address = field_entry.adr + VM_FRAME_HEADER_SIZE;
-    int level   = field_entry.lev;
-
-    emit(Instruction::make(OpCode::LOD, level, address));
+    emit_lvalue_address(node);
+    emit(Instruction::make(OpCode::LDI));
 }
 
 void CodegenVisitor::visit_func_call_expr(FuncCallExprNode &node)
 {
-    if (!sym_)
-        throw std::runtime_error("visit_func_call_expr: SymbolTable is not set");
+    const SymbolTable &sym = require_symbol_table(*this, "visit_func_call_expr");
 
     int func_tab_idx = node.tab_index;
     if (func_tab_idx < 0)
         throw std::runtime_error("visit_func_call_expr: unresolved function '" +
                                   node.name + "'");
 
-    const TabEntry &func_entry = sym_->get_tab(func_tab_idx);
+    const TabEntry &func_entry = sym.get_tab(func_tab_idx);
     int func_lev = func_entry.lev;
     int func_adr = func_entry.adr;
 

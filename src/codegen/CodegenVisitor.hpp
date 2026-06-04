@@ -54,6 +54,8 @@ public:
     void visit_record_access(RecordAccessNode &node);
     void visit_func_call_expr(FuncCallExprNode &node);
 
+    void emit_lvalue_address(ASTNode &node);
+
     int emit(const Instruction &instruction)
     {
         instructions_.push_back(instruction);

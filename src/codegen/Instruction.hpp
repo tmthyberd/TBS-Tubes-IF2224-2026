@@ -13,6 +13,9 @@ enum class OpCode
 {
     LIT,
     LOD,
+    LDA,
+    LDI,
+    STI,
     STO,
     CAL,
     INT,
@@ -37,7 +40,10 @@ enum class OprCode
     GTR = 11,
     LEQ = 12,
     WRT = 13,
-    WRTLN = 14
+    WRTLN = 14,
+    AND = 15,
+    OR = 16,
+    IDIV = 17
 };
 
 inline std::string opcode_to_string(OpCode op)
@@ -46,6 +52,9 @@ inline std::string opcode_to_string(OpCode op)
     {
     case OpCode::LIT: return "LIT";
     case OpCode::LOD: return "LOD";
+    case OpCode::LDA: return "LDA";
+    case OpCode::LDI: return "LDI";
+    case OpCode::STI: return "STI";
     case OpCode::STO: return "STO";
     case OpCode::CAL: return "CAL";
     case OpCode::INT: return "INT";
@@ -75,6 +84,9 @@ inline std::string oprcode_to_string(OprCode op)
     case OprCode::LEQ: return "LEQ";
     case OprCode::WRT: return "WRT";
     case OprCode::WRTLN: return "WRTLN";
+    case OprCode::AND: return "AND";
+    case OprCode::OR: return "OR";
+    case OprCode::IDIV: return "IDIV";
     }
     return "UNKNOWN";
 }
