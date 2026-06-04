@@ -1,0 +1,10 @@
+program WhileStmt;
+var
+  x: integer;
+begin
+  x := 0;
+  while x < 3 do
+  begin
+    x := x + 1
+  end;
+end.
