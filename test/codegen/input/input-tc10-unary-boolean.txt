@@ -1,0 +1,8 @@
+program UnaryBooleanExpr;
+var
+  x: integer;
+  flag, result: boolean;
+begin
+  result := not flag or (x > 5);
+  x := -x;
+end.

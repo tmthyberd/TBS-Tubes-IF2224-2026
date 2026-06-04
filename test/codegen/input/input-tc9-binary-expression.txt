@@ -1,0 +1,6 @@
+program BinaryExpr;
+var
+  x, y, z: integer;
+begin
+  z := x + y * 2;
+end.

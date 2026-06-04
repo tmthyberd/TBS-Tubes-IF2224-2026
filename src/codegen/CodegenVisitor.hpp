@@ -54,6 +54,8 @@ public:
     void visit_record_access(RecordAccessNode &node);
     void visit_func_call_expr(FuncCallExprNode &node);
 
+    void emit_lvalue_address(ASTNode &node);
+
     int emit(const Instruction &instruction)
     {
         instructions_.push_back(instruction);
@@ -87,6 +89,8 @@ public:
     {
         instructions_.clear();
     }
+
+    static OprCode ast_op_to_opr(const std::string &op);
 
     void set_symbol_table(const SymbolTable &sym)
     {

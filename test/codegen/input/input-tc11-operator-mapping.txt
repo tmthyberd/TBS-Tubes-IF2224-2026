@@ -1,0 +1,13 @@
+program OperatorMappingExpr;
+var
+  a, b, q, m: integer;
+  r: real;
+  eq, ne, le: boolean;
+begin
+  q := a div b;
+  m := a mod b;
+  r := a / b;
+  eq := a == b;
+  ne := a <> b;
+  le := a <= b;
+end.

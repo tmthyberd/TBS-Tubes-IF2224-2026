@@ -1,0 +1,7 @@
+program ArrayAccessExpr;
+var
+  i, value: integer;
+  arr: array [1..5] of integer;
+begin
+  value := arr[i];
+end.

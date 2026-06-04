@@ -1,0 +1,11 @@
+program RecordAccessExpr;
+type
+  Point = record
+    x, y: integer;
+  end;
+var
+  p: Point;
+  result: integer;
+begin
+  result := p.y;
+end.
