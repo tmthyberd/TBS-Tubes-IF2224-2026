@@ -1,0 +1,10 @@
+program CaseStmt;
+var
+  choice, result: integer;
+begin
+  choice := 2;
+  case choice of
+    1: result := 10;
+    2: result := 20
+  end;
+end.
