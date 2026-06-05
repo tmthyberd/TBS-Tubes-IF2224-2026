@@ -112,8 +112,14 @@ public:
     }
 
 protected:
+    void codegen_subprogram(const std::string &name, ASTNode *body, bool is_function);
+
     std::vector<Instruction> instructions_;
     const SymbolTable *sym_;
+
+    int current_func_tab_index_ = -1;
+    int current_func_result_addr_ = -1;
+    int current_func_level_ = -1;
 };
 
 #endif
