@@ -162,7 +162,8 @@ void VirtualMachine::execute_cal(const Instruction &instruction)
         static_link = memory_.load(0, 0).as_int();
 
     int return_address = ip_;
-    memory_.push_frame(static_link, caller_base, return_address, 0);
+    memory_.push_frame(static_link, caller_base, return_address, 0,
+                       instruction.level + 1);
 
     validate_jump_target(instruction.operand, code_.size());
     ip_ = instruction.operand;
