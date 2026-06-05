@@ -1,6 +1,6 @@
 program RecordAccessExpr;
 type
-  Point = record
+  Point == record
     x, y: integer;
   end;
 var
