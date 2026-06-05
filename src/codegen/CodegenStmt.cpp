@@ -124,9 +124,18 @@ void CodegenVisitor::visit_assign(AssignNode &node)
     if (!node.value)
         throw std::runtime_error("visit_assign: missing assignment value");
 
-    
+
     if (auto *var = dynamic_cast<VarNode *>(node.target.get()))
     {
+        if (current_func_tab_index_ >= 0 &&
+            var->tab_index == current_func_tab_index_)
+        {
+            visit(*node.value);
+            emit(Instruction::make(OpCode::STO, current_func_level_,
+                                   current_func_result_addr_));
+            return;
+        }
+
         int idx = resolve_var_tab_index(sym, var->tab_index, var->name,
                                         "visit_assign");
         const TabEntry &entry = sym.get_tab(idx);
@@ -316,47 +325,73 @@ void CodegenVisitor::visit_proc_call(ProcCallNode &node)
     emit(Instruction::make(OpCode::CAL, entry.lev, entry.adr));
 }
 
-namespace
+void CodegenVisitor::codegen_subprogram(const std::string &name, ASTNode *body,
+                                        bool is_function)
 {
-void codegen_subprogram(CodegenVisitor &visitor, const std::string &name,
-                        ASTNode *body)
-{
-    const SymbolTable &sym = require_sym(visitor, "codegen_subprogram");
+    const SymbolTable &sym = require_sym(*this, "codegen_subprogram");
 
     int idx = sym.lookup(name);
     if (idx >= 0)
-    {
-        
-        const_cast<SymbolTable &>(sym).get_tab(idx).adr =
-            visitor.current_instruction_index();
-    }
+        const_cast<SymbolTable &>(sym).get_tab(idx).adr = current_instruction_index();
 
-    int frame = VM_FRAME_HEADER_SIZE;
+    int psze = 0, vsze = 0, decl_level = 0;
     if (idx >= 0)
     {
+        decl_level = sym.get_tab(idx).lev;
         int btab_idx = sym.get_tab(idx).ref;
         if (btab_idx >= 0)
         {
             const BtabEntry &block = sym.get_btab(btab_idx);
-            frame += block.psze + block.vsze;
+            psze = block.psze;
+            vsze = block.vsze;
         }
     }
 
-    visitor.emit(Instruction::make(OpCode::INT, 0, frame));
+    int body_level = decl_level + 1;
+
+    int frame = VM_FRAME_HEADER_SIZE + psze + vsze;
+    int result_addr = -1;
+    if (is_function)
+    {
+        result_addr = VM_FRAME_HEADER_SIZE + psze + vsze;
+        frame += 1;
+    }
+
+    emit(Instruction::make(OpCode::INT, 0, frame));
+
+    for (int i = psze - 1; i >= 0; --i)
+        emit(Instruction::make(OpCode::STO, body_level,
+                               VM_FRAME_HEADER_SIZE + i));
+
+    int saved_idx = current_func_tab_index_;
+    int saved_addr = current_func_result_addr_;
+    int saved_level = current_func_level_;
+
+    current_func_tab_index_ = is_function ? idx : -1;
+    current_func_result_addr_ = result_addr;
+    current_func_level_ = body_level;
+
     if (body)
-        visitor.visit(*body);
-    visitor.emit(Instruction::make(OpCode::RET, 0, 0));
+        visit(*body);
+
+    current_func_tab_index_ = saved_idx;
+    current_func_result_addr_ = saved_addr;
+    current_func_level_ = saved_level;
+
+    if (is_function)
+        emit(Instruction::make(OpCode::LOD, body_level, result_addr));
+
+    emit(Instruction::make(OpCode::RET, 0, 0));
 }
-} 
 
 void CodegenVisitor::visit_proc_decl(ProcDeclNode &node)
 {
-    codegen_subprogram(*this, node.name, node.body.get());
+    codegen_subprogram(node.name, node.body.get(), false);
 }
 
 void CodegenVisitor::visit_func_decl(FuncDeclNode &node)
 {
-    codegen_subprogram(*this, node.name, node.body.get());
+    codegen_subprogram(node.name, node.body.get(), true);
 }
 
 void CodegenVisitor::visit_var_decl(VarDeclNode &) {}
