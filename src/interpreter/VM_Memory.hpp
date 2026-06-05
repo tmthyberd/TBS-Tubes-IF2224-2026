@@ -35,6 +35,10 @@ public:
     VMValue load(int level, int address) const;
     void store(int level, int address, const VMValue &value);
 
+    int resolve(int level, int address) const;
+    VMValue load_absolute(int address) const;
+    void store_absolute(int address, const VMValue &value);
+
     int push_frame(int static_link, int dynamic_link, int return_address, int local_slots);
     VMFrame pop_frame();
     int current_base() const;
