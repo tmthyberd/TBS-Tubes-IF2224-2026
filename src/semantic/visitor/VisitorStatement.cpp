@@ -461,7 +461,8 @@ void SemanticVisitor::visit_var_decl(VarDeclNode &n)
         e.ref  = resolve_type_ref(sym, n.type_node.get());
         e.nrm  = 1;
         e.adr  = sym.current_btab_index() >= 0
-                     ? sym.get_btab(sym.current_btab_index()).vsze
+                     ? sym.get_btab(sym.current_btab_index()).psze +
+                           sym.get_btab(sym.current_btab_index()).vsze
                      : 0;
         sym.enter_tab(e);
 
