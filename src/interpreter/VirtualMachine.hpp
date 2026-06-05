@@ -70,6 +70,9 @@ protected:
     void execute_lit(const Instruction &instruction);
     void execute_lod(const Instruction &instruction);
     void execute_sto(const Instruction &instruction);
+    void execute_lda(const Instruction &instruction);
+    void execute_ldi(const Instruction &instruction);
+    void execute_sti(const Instruction &instruction);
     void execute_cal(const Instruction &instruction);
     void execute_int(const Instruction &instruction);
     void execute_jmp(const Instruction &instruction);
