@@ -119,18 +119,29 @@ int main(int argc, char *argv[])
         CodegenVisitor codegen(sym);
         std::vector<Instruction> code = codegen.generate(*program);
 
-        VirtualMachine vm(code);
-        vm.run();
-
         std::ostringstream report;
         report << "=== INTERMEDIATE CODE ===\n";
         print_instructions(report, code);
+
+        VirtualMachine vm(code);
+        std::string runtime_error;
+        try
+        {
+            vm.run();
+        }
+        catch (const VMError &e)
+        {
+            runtime_error = e.what();
+        }
+
         report << "\n=== OUTPUT ===\n";
         report << vm.output();
+        if (!vm.output().empty() && vm.output().back() != '\n')
+            report << "\n";
+        if (!runtime_error.empty())
+            report << "Runtime Error: " << runtime_error << "\n";
 
         std::cout << report.str();
-        if (!vm.output().empty() && vm.output().back() != '\n')
-            std::cout << "\n";
 
         if (!output_path.empty())
         {
@@ -140,11 +151,9 @@ int main(int argc, char *argv[])
             out << report.str();
             std::cout << "\nOutput written to: " << output_path << "\n";
         }
-    }
-    catch (const VMError &e)
-    {
-        std::cerr << "Runtime Error: " << e.what() << "\n";
-        return 1;
+
+        if (!runtime_error.empty())
+            return 1;
     }
     catch (const SemanticError &e)
     {
