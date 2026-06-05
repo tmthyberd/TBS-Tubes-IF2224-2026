@@ -70,6 +70,27 @@ void VMMemory::store(int level, int address, const VMValue &value)
     slots_[static_cast<std::size_t>(resolved)] = value;
 }
 
+int VMMemory::resolve(int level, int address) const
+{
+    return resolve_address(level, address);
+}
+
+VMValue VMMemory::load_absolute(int address) const
+{
+    if (address < 0 || address >= static_cast<int>(slots_.size()))
+        throw InvalidMemoryAccessError("indirect load out of bounds: slot " +
+                                       int_text(address));
+    return slots_[static_cast<std::size_t>(address)];
+}
+
+void VMMemory::store_absolute(int address, const VMValue &value)
+{
+    if (address < 0 || address >= static_cast<int>(slots_.size()))
+        throw InvalidMemoryAccessError("indirect store out of bounds: slot " +
+                                       int_text(address));
+    slots_[static_cast<std::size_t>(address)] = value;
+}
+
 int VMMemory::push_frame(int static_link, int dynamic_link, int return_address, int local_slots)
 {
     if (local_slots < 0)
