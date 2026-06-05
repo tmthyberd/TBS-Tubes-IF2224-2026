@@ -1130,6 +1130,7 @@ std::unique_ptr<ASTNode> ASTBuilder::build_case_statement(const ParseTreeNode &n
     {
         std::vector<std::unique_ptr<ASTNode> > labels;
         const ParseTreeNode *statement_node = nullptr;
+        std::vector<const ParseTreeNode *> nested_blocks;
 
         for (int i = 0; i < child_count(block); ++i)
         {
@@ -1139,7 +1140,7 @@ std::unique_ptr<ASTNode> ASTBuilder::build_case_statement(const ParseTreeNode &n
             else if (is_node(c, "<statement>"))
                 statement_node = &c;
             else if (is_node(c, "<case-block>"))
-                add_case_block(c);
+                nested_blocks.push_back(&c);
         }
 
         for (std::size_t i = 0; i < labels.size(); ++i)
@@ -1150,6 +1151,9 @@ std::unique_ptr<ASTNode> ASTBuilder::build_case_statement(const ParseTreeNode &n
                 statement_copy = build_statement(*statement_node);
             stmt->cases.push_back(std::make_pair(std::move(label), std::move(statement_copy)));
         }
+
+        for (std::size_t i = 0; i < nested_blocks.size(); ++i)
+            add_case_block(*nested_blocks[i]);
     };
 
     for (int i = 0; i < child_count(n); ++i)
