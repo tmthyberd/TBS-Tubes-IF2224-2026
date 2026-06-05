@@ -17,6 +17,7 @@ struct VMFrame
     int return_address;
     int previous_base;
     int previous_memory_size;
+    int level;
 };
 
 class VMMemory
@@ -39,7 +40,8 @@ public:
     VMValue load_absolute(int address) const;
     void store_absolute(int address, const VMValue &value);
 
-    int push_frame(int static_link, int dynamic_link, int return_address, int local_slots);
+    int push_frame(int static_link, int dynamic_link, int return_address,
+                   int local_slots, int level = 0);
     VMFrame pop_frame();
     int current_base() const;
 
