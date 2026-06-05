@@ -63,6 +63,9 @@ void VirtualMachine::execute(const Instruction &instruction)
     case OpCode::LIT: execute_lit(instruction); break;
     case OpCode::LOD: execute_lod(instruction); break;
     case OpCode::STO: execute_sto(instruction); break;
+    case OpCode::LDA: execute_lda(instruction); break;
+    case OpCode::LDI: execute_ldi(instruction); break;
+    case OpCode::STI: execute_sti(instruction); break;
     case OpCode::CAL: execute_cal(instruction); break;
     case OpCode::INT: execute_int(instruction); break;
     case OpCode::JMP: execute_jmp(instruction); break;
@@ -91,6 +94,32 @@ void VirtualMachine::execute_sto(const Instruction &instruction)
 {
     VMValue value = memory_.pop();
     memory_.store(instruction.level, instruction.operand, value);
+}
+
+void VirtualMachine::execute_lda(const Instruction &instruction)
+{
+    int address = memory_.resolve(instruction.level, instruction.operand);
+    memory_.push(VMValue::integer(address));
+}
+
+void VirtualMachine::execute_ldi(const Instruction &instruction)
+{
+    (void)instruction;
+    VMValue address = memory_.pop();
+    if (!address.is_integer())
+        throw TypeMismatchError("indirect load expects an Integer address");
+    memory_.push(memory_.load_absolute(address.as_int()));
+}
+
+void VirtualMachine::execute_sti(const Instruction &instruction)
+{
+    // Store indirect: ambil nilai lalu alamat dari stack, simpan ke alamat itu.
+    (void)instruction;
+    VMValue value = memory_.pop();
+    VMValue address = memory_.pop();
+    if (!address.is_integer())
+        throw TypeMismatchError("indirect store expects an Integer address");
+    memory_.store_absolute(address.as_int(), value);
 }
 
 void VirtualMachine::execute_int(const Instruction &instruction)
@@ -133,7 +162,8 @@ void VirtualMachine::execute_cal(const Instruction &instruction)
         static_link = memory_.load(0, 0).as_int();
 
     int return_address = ip_;
-    memory_.push_frame(static_link, caller_base, return_address, 0);
+    memory_.push_frame(static_link, caller_base, return_address, 0,
+                       instruction.level + 1);
 
     validate_jump_target(instruction.operand, code_.size());
     ip_ = instruction.operand;
@@ -362,6 +392,36 @@ void VirtualMachine::execute_opr(const Instruction &instruction)
         if (!memory_.empty_stack())
             output_ += memory_.pop().to_output_string();
         output_ += "\n";
+        break;
+    }
+
+    case OprCode::IDIV:
+    {
+        VMValue b = memory_.pop();
+        VMValue a = memory_.pop();
+        if (!a.is_integer() || !b.is_integer())
+            throw TypeMismatchError("'div' requires Integer operands");
+        if (b.as_int() == 0)
+            throw DivisionByZeroError("integer division by zero");
+        memory_.push(VMValue::integer(a.as_int() / b.as_int()));
+        break;
+    }
+    case OprCode::AND:
+    {
+        VMValue b = memory_.pop();
+        VMValue a = memory_.pop();
+        if (!a.is_boolean() || !b.is_boolean())
+            throw TypeMismatchError("'and' requires Boolean operands");
+        memory_.push(VMValue::boolean(a.as_bool() && b.as_bool()));
+        break;
+    }
+    case OprCode::OR:
+    {
+        VMValue b = memory_.pop();
+        VMValue a = memory_.pop();
+        if (!a.is_boolean() || !b.is_boolean())
+            throw TypeMismatchError("'or' requires Boolean operands");
+        memory_.push(VMValue::boolean(a.as_bool() || b.as_bool()));
         break;
     }
 

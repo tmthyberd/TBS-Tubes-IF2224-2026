@@ -70,7 +70,28 @@ void VMMemory::store(int level, int address, const VMValue &value)
     slots_[static_cast<std::size_t>(resolved)] = value;
 }
 
-int VMMemory::push_frame(int static_link, int dynamic_link, int return_address, int local_slots)
+int VMMemory::resolve(int level, int address) const
+{
+    return resolve_address(level, address);
+}
+
+VMValue VMMemory::load_absolute(int address) const
+{
+    if (address < 0 || address >= static_cast<int>(slots_.size()))
+        throw InvalidMemoryAccessError("indirect load out of bounds: slot " +
+                                       int_text(address));
+    return slots_[static_cast<std::size_t>(address)];
+}
+
+void VMMemory::store_absolute(int address, const VMValue &value)
+{
+    if (address < 0 || address >= static_cast<int>(slots_.size()))
+        throw InvalidMemoryAccessError("indirect store out of bounds: slot " +
+                                       int_text(address));
+    slots_[static_cast<std::size_t>(address)] = value;
+}
+
+int VMMemory::push_frame(int static_link, int dynamic_link, int return_address, int local_slots, int level)
 {
     if (local_slots < 0)
         throw InvalidMemoryAccessError("cannot create frame with negative local slot count");
@@ -84,6 +105,7 @@ int VMMemory::push_frame(int static_link, int dynamic_link, int return_address, 
     frame.return_address = return_address;
     frame.previous_base = current_base_;
     frame.previous_memory_size = static_cast<int>(slots_.size());
+    frame.level = level;
 
     slots_.resize(slots_.size() + VM_FRAME_HEADER_SIZE + static_cast<std::size_t>(local_slots),
                   VMValue::none());
@@ -145,12 +167,17 @@ int VMMemory::resolve_address(int level, int address) const
     if (address < 0)
         throw InvalidMemoryAccessError("negative address " + int_text(address));
 
+    int current_level = frames_.empty() ? 0 : frames_.back().level;
+    int hops = current_level - level;
+    if (hops < 0)
+        hops = 0;
+
     int base = current_base_;
-    for (int i = 0; i < level; ++i)
+    for (int i = 0; i < hops; ++i)
     {
-        if (base < 0 || base + 1 >= static_cast<int>(slots_.size()))
+        if (base < 0 || base >= static_cast<int>(slots_.size()))
             throw InvalidMemoryAccessError("cannot resolve lexical level " + int_text(level));
-        base = slots_[static_cast<std::size_t>(base + 1)].as_int();
+        base = slots_[static_cast<std::size_t>(base)].as_int();
     }
 
     int resolved = base + address;
