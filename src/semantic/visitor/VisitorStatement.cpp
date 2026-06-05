@@ -39,6 +39,15 @@ static int resolve_type_ref(SymbolTable &sym, ASTNode *type_node)
     return -1;
 }
 
+static int variable_slot_size(SymbolTable &sym, TypeCode type, int ref)
+{
+    if (type == TypeCode::ARRAY && ref >= 0)
+        return sym.get_atab(ref).size;
+    if (type == TypeCode::RECORD && ref >= 0)
+        return sym.get_btab(ref).vsze;
+    return 1;
+}
+
 void SemanticVisitor::visit(ASTNode &n)
 {
     if (auto *p = dynamic_cast<ProgramNode *>(&n))        visit_program(*p);
@@ -457,7 +466,8 @@ void SemanticVisitor::visit_var_decl(VarDeclNode &n)
         sym.enter_tab(e);
 
         if (sym.current_btab_index() >= 0)
-            sym.get_btab(sym.current_btab_index()).vsze += 1;
+            sym.get_btab(sym.current_btab_index()).vsze +=
+                variable_slot_size(sym, e.type, e.ref);
     }
 
     n.lev = sym.current_level();

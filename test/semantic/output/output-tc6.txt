@@ -86,12 +86,12 @@ idx id                  link obj        type       ref nrm lev adr
  40 y                     39 VARIABLE   INTEGER     -1   1   1   1
  41 point                 38 TYPE       RECORD       1   1   0   0
  42 p                     41 VARIABLE   RECORD       1   1   0   0
- 43 arr                   42 VARIABLE   ARRAY        0   1   0   1
- 44 i                     43 VARIABLE   INTEGER     -1   1   0   2
+ 43 arr                   42 VARIABLE   ARRAY        0   1   0   2
+ 44 i                     43 VARIABLE   INTEGER     -1   1   0  12
 
 BTAB
 idx last lpar psze vsze
-  0   44   -1    0    3
+  0   44   -1    0   13
   1   40   -1    0    2
   2   -1   -1    0    0
 
