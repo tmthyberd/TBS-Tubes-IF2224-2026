@@ -6,6 +6,7 @@ LEXER_TARGET = lexer
 PARSER_TARGET = parser
 SEMANTIC_TARGET = semantic
 COMPILER_TARGET = compiler
+CODEGEN_TARGET = codegen
 
 # Source files
 LEXER_SRCS = src/main.cpp \
@@ -47,6 +48,15 @@ COMPILER_SRCS = src/compiler_main.cpp \
                 src/interpreter/VM_Exceptions.cpp \
                 src/interpreter/VM_Operations.cpp
 
+CODEGEN_SRCS = src/codegen_main.cpp \
+               src/codegen/DASTReader.cpp \
+               src/parser/core/ParseTreeNode.cpp \
+               src/semantic/ASTBuilder.cpp \
+               src/semantic/symbol_table/SymbolTable.cpp \
+               src/codegen/CodegenStmt.cpp \
+               src/codegen/CodegenExpr.cpp \
+               src/interpreter/VM_Exceptions.cpp
+
 LEXER_HEADERS = src/lexer/token.h \
                 src/lexer/lexer.h
 
@@ -72,13 +82,16 @@ COMPILER_HEADERS = src/codegen/Instruction.hpp \
                    src/interpreter/VM_Exceptions.hpp \
                    src/interpreter/VirtualMachine.hpp
 
-HEADERS = $(LEXER_HEADERS) $(PARSER_CORE_HEADERS) $(SEMANTIC_HEADERS) $(COMPILER_HEADERS)
+CODEGEN_HEADERS = src/codegen/DASTReader.hpp
+
+HEADERS = $(LEXER_HEADERS) $(PARSER_CORE_HEADERS) $(SEMANTIC_HEADERS) $(COMPILER_HEADERS) $(CODEGEN_HEADERS)
 
 # Object files
 LEXER_OBJS = $(LEXER_SRCS:.cpp=.o)
 PARSER_OBJS = $(PARSER_SRCS:.cpp=.o)
 SEMANTIC_OBJS = $(SEMANTIC_SRCS:.cpp=.o)
 COMPILER_OBJS = $(COMPILER_SRCS:.cpp=.o)
+CODEGEN_OBJS = $(CODEGEN_SRCS:.cpp=.o)
 
 # Detect OS for clean command
 ifeq ($(OS),Windows_NT)
@@ -88,6 +101,7 @@ ifeq ($(OS),Windows_NT)
     PARSER_EXE = $(PARSER_TARGET).exe
     SEMANTIC_EXE = $(SEMANTIC_TARGET).exe
     COMPILER_EXE = $(COMPILER_TARGET).exe
+    CODEGEN_EXE = $(CODEGEN_TARGET).exe
 else
     RM = rm -f
     RMDIR = rm -rf
@@ -95,9 +109,10 @@ else
     PARSER_EXE = $(PARSER_TARGET)
     SEMANTIC_EXE = $(SEMANTIC_TARGET)
     COMPILER_EXE = $(COMPILER_TARGET)
+    CODEGEN_EXE = $(CODEGEN_TARGET)
 endif
 
-all: $(LEXER_TARGET) $(PARSER_TARGET) $(SEMANTIC_TARGET) $(COMPILER_TARGET)
+all: $(LEXER_TARGET) $(PARSER_TARGET) $(SEMANTIC_TARGET) $(COMPILER_TARGET) $(CODEGEN_TARGET)
 
 # Linking lexer
 $(LEXER_TARGET): $(LEXER_OBJS)
@@ -114,6 +129,10 @@ $(SEMANTIC_TARGET): $(SEMANTIC_OBJS)
 # Linking compiler (pipeline penuh + Virtual Machine)
 $(COMPILER_TARGET): $(COMPILER_OBJS)
 	$(CXX) $(CXXFLAGS) -o $(COMPILER_TARGET) $(COMPILER_OBJS)
+
+# Linking codegen (masukan Decorated AST -> Intermediate Code + Virtual Machine)
+$(CODEGEN_TARGET): $(CODEGEN_OBJS)
+	$(CXX) $(CXXFLAGS) -o $(CODEGEN_TARGET) $(CODEGEN_OBJS)
 
 %.o: %.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
@@ -141,8 +160,9 @@ ifeq ($(OS),Windows_NT)
 	-$(RM) $(PARSER_EXE) 2>nul
 	-$(RM) $(SEMANTIC_EXE) 2>nul
 	-$(RM) $(COMPILER_EXE) 2>nul
+	-$(RM) $(CODEGEN_EXE) 2>nul
 else
-	$(RM) $(LEXER_OBJS) $(PARSER_OBJS) $(SEMANTIC_OBJS) $(COMPILER_OBJS) $(LEXER_TARGET) $(PARSER_TARGET) $(SEMANTIC_TARGET) $(COMPILER_TARGET)
+	$(RM) $(LEXER_OBJS) $(PARSER_OBJS) $(SEMANTIC_OBJS) $(COMPILER_OBJS) $(CODEGEN_OBJS) $(LEXER_TARGET) $(PARSER_TARGET) $(SEMANTIC_TARGET) $(COMPILER_TARGET) $(CODEGEN_TARGET)
 endif
 
 # Run lexer dengan file test (jika ada)
@@ -179,11 +199,19 @@ else
 	./$(COMPILER_TARGET) test/codegen/input/input-tc1-assignment.txt
 endif
 
+run-codegen: $(LEXER_TARGET) $(PARSER_TARGET) $(SEMANTIC_TARGET) $(CODEGEN_TARGET)
+ifeq ($(OS),Windows_NT)
+	$(LEXER_EXE) test\codegen\input\input-tc1-assignment.txt tokens.tmp && $(PARSER_EXE) tokens.tmp parse_tree.tmp && $(SEMANTIC_EXE) parse_tree.tmp dast.tmp && $(CODEGEN_EXE) dast.tmp
+else
+	./$(LEXER_TARGET) test/codegen/input/input-tc1-assignment.txt tokens.tmp && ./$(PARSER_TARGET) tokens.tmp parse_tree.tmp && ./$(SEMANTIC_TARGET) parse_tree.tmp dast.tmp && ./$(CODEGEN_TARGET) dast.tmp
+endif
+
 # Alias eksplisit tanpa tanda hubung.
 runparser: run-parser
 runlexer: run-lexer
 runsemantic: run-semantic
 runcompiler: run-compiler
+runcodegen: run-codegen
 
 # Phony targets
-.PHONY: all clean debug run-lexer runlexer run-parser runparser run-semantic runsemantic run-compiler runcompiler
+.PHONY: all clean debug run-lexer runlexer run-parser runparser run-semantic runsemantic run-compiler runcompiler run-codegen runcodegen
