@@ -1,0 +1,9 @@
+program IntArithmetic;
+var
+  a, b, hasil: integer;
+begin
+  a := 12;
+  b := 5;
+  hasil := (a + b) * 2 - a div b;
+  writeln(hasil);
+end.

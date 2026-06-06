@@ -1,0 +1,12 @@
+program IntArray;
+var
+  arr: array [1..5] of integer;
+  i, sum: integer;
+begin
+  for i := 1 to 5 do
+    arr[i] := i * i;
+  sum := 0;
+  for i := 1 to 5 do
+    sum := sum + arr[i];
+  writeln(sum);
+end.

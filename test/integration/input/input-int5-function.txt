@@ -1,0 +1,14 @@
+program IntFunction;
+var
+  z: integer;
+function maks(a, b: integer): integer;
+begin
+  if a > b then
+    maks := a
+  else
+    maks := b;
+end;
+begin
+  z := maks(17, 42);
+  writeln(z);
+end.
