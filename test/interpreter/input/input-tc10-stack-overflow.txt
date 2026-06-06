@@ -1,0 +1,11 @@
+program StackOverflow;
+var
+  r: integer;
+function loopForever(n: integer): integer;
+begin
+  loopForever := loopForever(n + 1);
+end;
+begin
+  r := loopForever(1);
+  writeln(r);
+end.
