@@ -191,7 +191,7 @@ period
 | 13524078  | Membuat DFA, membuat template laporan, laporan bagian 1.3, 2.1, Bab 3, dan Bab 4 | 25%        |
 | 13524092  | Membuat DFA, merevisi DFA berdasarkan QnA, pewarnaan DFA, membuat laporan bagian 1.1 dan 1.2 | 25%        |
 
-# Milestone 2 – Syntax Analyzer (Parser)
+# Milestone 2 - Syntax Analyzer (Parser)
 
 ## Deskripsi
 Implementasi **recursive‑descent parser** untuk bahasa Arion sesuai grammar yang telah didefinisikan pada _Laporan‑2‑TBS.md_. Parser membaca file token yang dihasilkan oleh lexer dan membangun **Parse Tree** (`ParseTreeNode`). 
@@ -204,14 +204,14 @@ make            # membangun lexer & parser
 
 ## Testing
 Folder `test/parser/` berisi lima test case (`input-tc1.txt` ‑ `input-tc5.txt`).  Setiap test case memiliki folder:
-- `input/`   – token file input
-- `output/`  – hasil sebenarnya setelah menjalankan `./parser`
+- `input/`   - token file input
+- `output/`  - hasil sebenarnya setelah menjalankan `./parser`
 
 
 
 ---
 
-# Milestone 3 – Semantic Analyzer
+# Milestone 3 - Semantic Analyzer
 
 ## Deskripsi
 Implementasi **Semantic Analyzer** untuk bahasa Arion. Tahap ini membaca **Parse Tree** keluaran parser, mengubahnya menjadi **Abstract Syntax Tree (AST)**, lalu melakukan pemeriksaan semantik (type checking, scope, deklarasi, kompatibilitas operator) sambil membangun **Symbol Table** (tab/btab/atab) mengikuti model Wirth's Pascal-S.
@@ -293,9 +293,9 @@ src/semantic_main.cpp                # entry point: load parse-tree, build AST, 
 ```
 
 ## Testing
-Folder `test/semantic/` berisi **7 test case** (`input-tc1.txt` – `input-tc7.txt`):
-- `input/`  – parse tree input (keluaran parser)
-- `output/` – hasil semantic analysis (Decorated AST + Symbol Table, atau pesan `Semantic Error`)
+Folder `test/semantic/` berisi **7 test case** (`input-tc1.txt` - `input-tc7.txt`):
+- `input/`  - parse tree input (keluaran parser)
+- `output/` - hasil semantic analysis (Decorated AST + Symbol Table, atau pesan `Semantic Error`)
 
 Cakupan test case:
 | TC  | Skenario |
@@ -354,3 +354,94 @@ idx xtyp       etyp       eref low high elsz size
 | 13524076 | Implementasi sebagian VisitorStatement, semantic_main, mengisi laporan Bab II| 25%        |
 | 13524078 | Implementasi Interface, membuat template dokumen, dan mengisi Bab I          | 25%        |
 | 13524092 | Implementasi ASTBuilder dan ASTNode, bantu dokumen                           | 25%        |
+
+---
+
+# Milestone 4 - Intermediate Code Generator & Interpreter
+
+## Deskripsi
+Tahap terakhir pipeline kompilator bahasa Arion. Terdiri dari dua komponen:
+
+1. **Intermediate Code Generator** - mengubah **Decorated AST** (keluaran tahap semantik) menjadi daftar instruksi **stack machine** (Intermediate Code) menggunakan penelusuran berbasis **DFS** terhadap AST + teknik **backpatching** untuk control flow.
+2. **Interpreter / Virtual Machine** - mengeksekusi Intermediate Code pada sebuah **stack machine** dengan siklus *Fetch-Decode-Execute*, mengelola memori melalui **stack frame** (static link, dynamic link, return address).
+
+Disediakan dua *executable*:
+
+- **`compiler`** - pipeline penuh dari **source code** Arion: `lexer -> parser -> semantic -> codegen -> VM`, menampilkan Intermediate Code **dan** output eksekusi.
+- **`codegen`** - masukan berupa **Decorated AST** (keluaran `semantic`), keluaran **hanya Intermediate Code** (tanpa eksekusi). Code generator murni.
+
+## Build & Run
+```bash
+make                 # build lexer, parser, semantic, compiler, codegen
+make compiler        # build compiler (pipeline penuh source -> output)
+make codegen         # build code generator (masukan Decorated AST)
+
+# Pipeline penuh dari source Arion:
+./compiler <source.txt>
+./compiler <source.txt> <output.txt>
+
+# Code generator dengan masukan Decorated AST:
+#   (Decorated AST dihasilkan dari source via lexer -> parser -> semantic)
+./codegen <decorated_ast.txt>
+./codegen <decorated_ast.txt> <output.txt>
+```
+Pada Windows (MinGW) gunakan `mingw32-make` dan tambahkan akhiran `.exe` (mis. `compiler.exe`).
+
+Target *run* yang tersedia: `make run-compiler`, `make run-codegen`.
+
+## Set Instruksi (Stack Machine)
+| OpCode | Keterangan | | OprCode | Operasi |
+|---|---|---|---|---|
+| `LIT v`   | push literal v          | | 1 `NEG`  | negasi |
+| `LOD l,a` | muat nilai dari (l,a)   | | 2 `ADD` / 3 `SUB` | tambah / kurang |
+| `STO l,a` | simpan ke (l,a)         | | 4 `MUL` / 5 `DIV` | kali / bagi real |
+| `LDA l,a` | push alamat absolut     | | 6 `MOD` / 17 `IDIV` | modulo / `div` |
+| `LDI`/`STI` | load/store indirect (array/record) | | 7-12 | `EQL NEQ LSS GEQ GTR LEQ` |
+| `CAL l,a` | panggil subprogram      | | 13 `WRT` / 14 `WRTLN` | tulis / tulis+newline |
+| `INT m`   | alokasi frame ukuran m  | | 15 `AND` / 16 `OR` | boolean |
+| `JMP a` / `JPC a` | lompat / lompat bila false | | | |
+| `RET`     | kembali dari subprogram | | | |
+
+## Fitur
+- Ekspresi aritmetika, relasional, boolean (presedensi terjaga lewat DFS)
+- Control flow: `if-else`, `while`, `for` (`to`/`downto`), `repeat-until`, `case`
+- **Array** dan **record** (baca/tulis) via indirect addressing + validasi batas
+- **Procedure** dan **function** penuh: parameter nilai, nilai balik (via nama fungsi), **rekursi**, akses variabel global (static link)
+- `writeln`/`write` multi-argumen
+- **Penanganan runtime error / vulnerabilities:** integer overflow, pembagian/modulo nol, out-of-bounds array, target lompatan invalid, stack overflow/underflow, type mismatch — semua dilaporkan tanpa membuat program *crash*
+
+## Struktur Direktori Modul Milestone 4
+```
+src/
+├── codegen/
+│   ├── Instruction.hpp         # OpCode, OprCode, struct Instruction
+│   ├── CodegenVisitor.hpp      # antarmuka code generator
+│   ├── CodegenExpr.cpp         # codegen ekspresi + OPR mapper
+│   ├── CodegenStmt.cpp         # codegen statement, control flow, subprogram
+│   └── DASTReader.hpp / .cpp   # pembaca Decorated AST teks ke AST + Symbol Table
+├── interpreter/
+│   ├── VM_Value.hpp            # runtime value (int/real/char/bool/string)
+│   ├── VM_Memory.hpp / .cpp    # slot memori, stack, frame, addressing
+│   ├── VirtualMachine.hpp      # antarmuka VM
+│   ├── VM_Operations.cpp       # run/step/execute + dispatch instruksi
+│   └── VM_Exceptions.hpp / .cpp# hierarki exception runtime
+├── compiler_main.cpp           # entry point pipeline penuh (source ke output)
+└── codegen_main.cpp            # entry point code generator (Decorated AST ke IC)
+```
+
+## Testing
+| Folder | Cakupan | Hasil |
+|--------|---------|-------|
+| `test/codegen/decorated-ast/` | Masukan Decorated AST untuk `codegen` (14 kasus) | 14/14 |
+| `test/integration/`    | Pipeline penuh source menuju output (7 kasus) | 7/7 |
+| `test/interpreter/`    | Unit instruksi VM + bonus runtime vulnerabilities (10 kasus) | 10/10 |
+| `test/semantic/`       | Regresi analisis semantik Milestone 3 (8 kasus) | 8/8 |
+
+## Pembagian Tugas
+
+| NIM | Deskripsi Tugas | Persentase |
+|------|----------------|------------|
+| 13524012 | Laporan *test case*, implementasi VM Operations, `codegen_main`, interpreter, pengujian (*testing*), serta Codegen Statement | 25% |
+| 13524076 | Melengkapi laporan, mengimplementasikan Codegen Expression dan OPR Mapper | 25% |
+| 13524078 | Membuat template laporan, menyusun Bab 1, serta menyiapkan *test case* untuk pengujian | 25% |
+| 13524092 | Menyusun Bab 2 laporan, mengembangkan fondasi backend compiler meliputi antarmuka code generator, format instruksi, memori VM, representasi nilai runtime, antarmuka VM, dan exception runtime | 25% |
