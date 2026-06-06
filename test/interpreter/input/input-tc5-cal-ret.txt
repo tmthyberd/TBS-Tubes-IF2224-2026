@@ -1,0 +1,11 @@
+program CalRet;
+var
+  z: integer;
+function kali2(n: integer): integer;
+begin
+  kali2 := n * 2;
+end;
+begin
+  z := kali2(21);
+  writeln(z);
+end.

@@ -1,0 +1,8 @@
+program LitLodSto;
+var
+  x, y: integer;
+begin
+  x := 25;
+  y := x;
+  writeln(y);
+end.

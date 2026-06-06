@@ -1,0 +1,7 @@
+program IntWriteMulti;
+var
+  n: integer;
+begin
+  n := 100;
+  writeln('Nilai = ', n);
+end.

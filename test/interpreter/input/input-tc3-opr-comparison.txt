@@ -1,0 +1,7 @@
+program OprComparison;
+var
+  b: boolean;
+begin
+  b := (5 > 3) and (2 <= 2);
+  writeln(b);
+end.

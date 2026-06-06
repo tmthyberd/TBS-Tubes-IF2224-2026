@@ -1,0 +1,13 @@
+program JmpJpc;
+var
+  x, c: integer;
+begin
+  x := 0;
+  c := 0;
+  while x < 5 do
+  begin
+    c := c + 1;
+    x := x + 1
+  end;
+  writeln(c);
+end.

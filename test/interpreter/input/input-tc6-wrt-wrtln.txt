@@ -1,0 +1,8 @@
+program WrtWrtln;
+var
+  a, b: integer;
+begin
+  a := 7;
+  b := 8;
+  writeln(a, b);
+end.

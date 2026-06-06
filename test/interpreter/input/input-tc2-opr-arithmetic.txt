@@ -1,0 +1,7 @@
+program OprArithmetic;
+var
+  a: integer;
+begin
+  a := 20 + 3 * 4 - 6 div 2;
+  writeln(a);
+end.
