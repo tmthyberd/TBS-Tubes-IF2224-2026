@@ -167,6 +167,19 @@ void SymbolTable::close_scope()
         scope_stack.pop_back();
 }
 
+void SymbolTable::load_dump(const std::vector<TabEntry> &tab_in,
+                            const std::vector<BtabEntry> &btab_in,
+                            const std::vector<AtabEntry> &atab_in)
+{
+    tab = tab_in;
+    btab = btab_in;
+    atab = atab_in;
+
+    scope_stack.clear();
+    if (!btab.empty())
+        scope_stack.push_back(0);
+}
+
 // Accessors
 
 TabEntry &SymbolTable::get_tab(int i)

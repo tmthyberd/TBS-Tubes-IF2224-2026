@@ -57,6 +57,10 @@ public:
     int open_scope();
     void close_scope();
 
+    void load_dump(const std::vector<TabEntry> &tab_in,
+                   const std::vector<BtabEntry> &btab_in,
+                   const std::vector<AtabEntry> &atab_in);
+
     TabEntry &get_tab(int i);
     BtabEntry &get_btab(int i);
     AtabEntry &get_atab(int i);
